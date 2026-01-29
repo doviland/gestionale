@@ -1,6 +1,9 @@
 // ========================================
 // GESTIONALE AGENZIA - Frontend Application
+// Version: 1.0.2 - Build: 2026-01-29-v2
 // ========================================
+
+console.log('🚀 GESTIONALE AGENZIA v1.0.2 LOADED');
 
 // Global state
 const APP = {
@@ -17,6 +20,7 @@ const APP = {
 
 // API Base URL
 const API_URL = '/api';
+console.log('📡 API URL:', API_URL);
 
 // ========================================
 // UTILITY FUNCTIONS
@@ -27,9 +31,11 @@ function getToken() {
 }
 
 function setToken(token) {
+    console.log('💾 Salvataggio token:', token ? 'Token presente' : 'Token mancante!');
     localStorage.setItem('token', token);
     APP.token = token;
     axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+    console.log('✅ Token salvato in localStorage e header Axios configurato');
 }
 
 function clearToken() {
@@ -127,14 +133,26 @@ function getAreaIcon(area) {
 // ========================================
 
 async function login(email, password) {
+    console.log('🔐 Tentativo login per:', email);
     try {
+        console.log('📤 Invio richiesta a:', `${API_URL}/auth/login`);
         const response = await axios.post(`${API_URL}/auth/login`, { email, password });
+        console.log('✅ Login riuscito! Response:', response.data);
+        
         const { token, user } = response.data;
+        console.log('🎫 Token ricevuto:', token ? 'SI' : 'NO');
+        console.log('👤 User ricevuto:', user);
+        
         setToken(token);
         APP.user = user;
+        console.log('💾 Token salvato in localStorage');
+        console.log('✨ APP.user impostato:', APP.user);
+        
         return true;
     } catch (error) {
-        console.error('Login error:', error);
+        console.error('❌ Login error:', error);
+        console.error('❌ Response data:', error.response?.data);
+        console.error('❌ Status code:', error.response?.status);
         throw error;
     }
 }
