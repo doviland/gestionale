@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔧 Debug Login - Gestionale</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios@1.6.0/dist/axios.min.js"></script>
+</head>
+<body class="bg-gray-900 text-white p-8">
+    <div class="max-w-4xl mx-auto">
+        <h1 class="text-4xl font-bold mb-8">🔧 Debug Login System</h1>
+        
+        <!-- Test Credenziali -->
+        <div class="bg-gray-800 rounded-lg p-6 mb-6">
+            <h2 class="text-2xl font-bold mb-4">🔐 Test Login</h2>
+            <div class="space-y-4">
+                <div>
+                    <label class="block mb-2">Email:</label>
+                    <input type="email" id="email" value="admin@agenzia.it" class="w-full p-3 bg-gray-700 rounded text-white">
+                </div>
+                <div>
+                    <label class="block mb-2">Password:</label>
+                    <input type="password" id="password" value="admin123" class="w-full p-3 bg-gray-700 rounded text-white">
+                </div>
+                <button onclick="testLogin()" class="w-full bg-blue-600 hover:bg-blue-700 p-3 rounded font-bold">
+                    🚀 Test Login API
+                </button>
+            </div>
+        </div>
+
+        <!-- Risultati -->
+        <div class="bg-gray-800 rounded-lg p-6 mb-6">
+            <h2 class="text-2xl font-bold mb-4">📊 Risultati</h2>
+            <div id="results" class="space-y-2 font-mono text-sm"></div>
+        </div>
+
+        <!-- LocalStorage -->
+        <div class="bg-gray-800 rounded-lg p-6 mb-6">
+            <h2 class="text-2xl font-bold mb-4">💾 LocalStorage</h2>
+            <div id="storage" class="font-mono text-sm"></div>
+            <button onclick="clearStorage()" class="mt-4 bg-red-600 hover:bg-red-700 px-4 py-2 rounded">
+                🗑️ Cancella LocalStorage
+            </button>
+        </div>
+
+        <!-- Sistema -->
+        <div class="bg-gray-800 rounded-lg p-6">
+            <h2 class="text-2xl font-bold mb-4">⚙️ Sistema</h2>
+            <div id="system" class="font-mono text-sm"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = '/api';
+        
+        function log(message, type = 'info') {
+            const colors = {
+                info: 'text-blue-400',
+                success: 'text-green-400',
+                error: 'text-red-400',
+                warning: 'text-yellow-400'
+            };
+            const div = document.createElement('div');
+            div.className = `p-2 ${colors[type]}`;
+            div.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            document.getElementById('results').appendChild(div);
+        }
+
+        async function testLogin() {
+            document.getElementById('results').innerHTML = '';
+            log('🔄 Inizio test login...', 'info');
+            
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            
+            log(`📧 Email: ${email}`, 'info');
+            log(`🔑 Password: ${'*'.repeat(password.length)}`, 'info');
+            
+            try {
+                log(`📡 Invio richiesta POST a: ${API_URL}/auth/login`, 'info');
+                
+                const response = await axios.post(`${API_URL}/auth/login`, {
+                    email,
+                    password
+                });
+                
+                log('✅ Risposta ricevuta!', 'success');
+                log(`📦 Status Code: ${response.status}`, 'success');
+                log(`📦 Data: ${JSON.stringify(response.data, null, 2)}`, 'info');
+                
+                if (response.data.token) {
+                    log('🎫 Token ricevuto: ' + response.data.token.substring(0, 50) + '...', 'success');
+                    localStorage.setItem('token', response.data.token);
+                    log('💾 Token salvato in localStorage', 'success');
+                    updateStorageDisplay();
+                } else {
+                    log('❌ Nessun token nella risposta!', 'error');
+                }
+                
+                if (response.data.user) {
+                    log(`👤 Utente: ${response.data.user.name} (${response.data.user.email})`, 'success');
+                    log(`👑 Ruolo: ${response.data.user.role}`, 'success');
+                } else {
+                    log('❌ Nessun utente nella risposta!', 'error');
+                }
+                
+                // Test API protetta
+                log('🔒 Test chiamata API protetta...', 'info');
+                axios.defaults.headers.common['Authorization'] = `Bearer ${response.data.token}`;
+                
+                const meResponse = await axios.get(`${API_URL}/auth/me`);
+                log('✅ API /auth/me funziona!', 'success');
+                log(`📦 User data: ${JSON.stringify(meResponse.data, null, 2)}`, 'info');
+                
+            } catch (error) {
+                log('❌ ERRORE!', 'error');
+                log(`❌ Messaggio: ${error.message}`, 'error');
+                if (error.response) {
+                    log(`❌ Status: ${error.response.status}`, 'error');
+                    log(`❌ Data: ${JSON.stringify(error.response.data)}`, 'error');
+                }
+            }
+        }
+
+        function updateStorageDisplay() {
+            const token = localStorage.getItem('token');
+            const html = token 
+                ? `<div class="text-green-400">✅ Token presente</div>
+                   <div class="mt-2 p-2 bg-gray-700 rounded break-all">${token.substring(0, 100)}...</div>`
+                : '<div class="text-red-400">❌ Nessun token salvato</div>';
+            document.getElementById('storage').innerHTML = html;
+        }
+
+        function clearStorage() {
+            localStorage.clear();
+            log('🗑️ LocalStorage cancellato', 'warning');
+            updateStorageDisplay();
+        }
+
+        function updateSystemInfo() {
+            const info = `
+                <div class="space-y-1">
+                    <div>🌐 User Agent: ${navigator.userAgent}</div>
+                    <div>📱 Platform: ${navigator.platform}</div>
+                    <div>🍪 Cookies Enabled: ${navigator.cookieEnabled ? '✅' : '❌'}</div>
+                    <div>💾 LocalStorage Available: ${typeof(Storage) !== "undefined" ? '✅' : '❌'}</div>
+                    <div>📡 Online: ${navigator.onLine ? '✅' : '❌'}</div>
+                    <div>🔗 Location: ${window.location.href}</div>
+                </div>
+            `;
+            document.getElementById('system').innerHTML = info;
+        }
+
+        // Init
+        updateStorageDisplay();
+        updateSystemInfo();
+        log('✨ Sistema di debug pronto', 'success');
+        log('💡 Premi "Test Login API" per iniziare', 'info');
+    </script>
+</body>
+</html>
