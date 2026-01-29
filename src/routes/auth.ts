@@ -218,4 +218,55 @@ auth.put('/users/:id', authMiddleware, adminOnly, async (c) => {
   }
 });
 
+/**
+ * DELETE /api/auth/users/:id
+ * Elimina utente (solo admin)
+ */
+auth.delete('/users/:id', adminOnly, async (c) => {
+  try {
+    const id = c.req.param('id');
+    const currentUser = c.get('user');
+    
+    // Non puoi eliminare te stesso
+    if (parseInt(id) === currentUser.id) {
+      return c.json({ error: 'Cannot delete your own account' }, 400);
+    }
+    
+    // Verifica che l'utente esista
+    const existing = await c.env.DB.prepare(
+      'SELECT id FROM users WHERE id = ?'
+    )
+      .bind(id)
+      .first();
+    
+    if (!existing) {
+      return c.json({ error: 'User not found' }, 404);
+    }
+    
+    // Elimina utente
+    const result = await c.env.DB.prepare(
+      'DELETE FROM users WHERE id = ?'
+    )
+      .bind(id)
+      .run();
+    
+    if (!result.success) {
+      return c.json({ error: 'Failed to delete user' }, 500);
+    }
+    
+    // Log activity
+    await c.env.DB.prepare(
+      `INSERT INTO activity_log (user_id, entity_type, entity_id, action, details)
+       VALUES (?, 'user', ?, 'deleted', ?)`
+    )
+      .bind(currentUser.id, id, 'Deleted user')
+      .run();
+    
+    return c.json({ message: 'User deleted successfully' });
+  } catch (error) {
+    console.error('Delete user error:', error);
+    return c.json({ error: 'Internal server error' }, 500);
+  }
+});
+
 export default auth;

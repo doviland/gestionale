@@ -814,17 +814,33 @@ async function deleteTask(taskId, projectId) {
         await axios.delete(`${API_URL}/tasks/${taskId}`);
         showNotification('Task eliminata con successo!', 'success');
         
-        // Ricarica progetto
-        const response = await axios.get(`${API_URL}/projects/${projectId}`);
-        const modal = document.querySelector('.fixed.inset-0');
-        modal.projectData = response.data;
+        // Se siamo in un modal progetto, ricarica
+        if (projectId && projectId !== 'null' && projectId !== null) {
+            try {
+                const response = await axios.get(`${API_URL}/projects/${projectId}`);
+                const modal = document.querySelector('.fixed.inset-0');
+                if (modal && modal.projectData) {
+                    modal.projectData = response.data;
+                    switchProjectTab('tasks');
+                }
+            } catch (error) {
+                console.log('Modal non più presente, ignoro ricarica');
+            }
+        }
         
-        // Aggiorna vista tasks
-        switchProjectTab('tasks');
+        // Se siamo nella vista tasks globale, ricarica quella
+        if (APP.currentView === 'tasks') {
+            await loadTasks();
+            renderTasks();
+        }
         
     } catch (error) {
         console.error('❌ Errore eliminazione task:', error);
-        showNotification('Errore nell\'eliminazione della task', 'error');
+        if (error.response && error.response.status === 404) {
+            showNotification('Task già eliminata', 'warning');
+        } else {
+            showNotification('Errore nell\'eliminazione della task', 'error');
+        }
     }
 }
 

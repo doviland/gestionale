@@ -155,7 +155,16 @@ async function deleteClient(clientId) {
         
     } catch (error) {
         console.error('❌ Errore eliminazione cliente:', error);
-        showNotification('Errore nell\'eliminazione del cliente', 'error');
+        if (error.response && error.response.status === 404) {
+            showNotification('Cliente già eliminato', 'warning');
+            // Ricarica comunque
+            await loadClients();
+            if (APP.currentView === 'clients') {
+                renderClients();
+            }
+        } else {
+            showNotification('Errore nell\'eliminazione del cliente', 'error');
+        }
     }
 }
 
@@ -401,7 +410,15 @@ async function deleteTemplate(templateId) {
         
     } catch (error) {
         console.error('❌ Errore eliminazione template:', error);
-        showNotification('Errore nell\'eliminazione del template', 'error');
+        if (error.response && error.response.status === 404) {
+            showNotification('Template già eliminato', 'warning');
+            await loadTemplates();
+            if (APP.currentView === 'templates') {
+                renderTemplates();
+            }
+        } else {
+            showNotification('Errore nell\'eliminazione del template', 'error');
+        }
     }
 }
 
@@ -572,7 +589,17 @@ async function deleteUser(userId) {
         
     } catch (error) {
         console.error('❌ Errore eliminazione utente:', error);
-        showNotification('Errore nell\'eliminazione dell\'utente', 'error');
+        if (error.response && error.response.status === 404) {
+            showNotification('Utente già eliminato', 'warning');
+            await loadUsers();
+            if (APP.currentView === 'users') {
+                renderUsers();
+            }
+        } else if (error.response && error.response.status === 400) {
+            showNotification(error.response.data.error || 'Operazione non permessa', 'error');
+        } else {
+            showNotification('Errore nell\'eliminazione dell\'utente', 'error');
+        }
     }
 }
 
