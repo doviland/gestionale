@@ -31,25 +31,55 @@ Un sistema completo di gestione progetti per agenzie, con tracking attività, ge
 - ✅ **Permessi per area** - Accesso limitato alle aree di competenza
 - ✅ **Filtri avanzati** - Filtra per progetto, cliente, area, stato
 
-### 📊 Visualizzazioni Gantt (NEW!)
+### 📊 Visualizzazioni Gantt Interattivo (NEW! v2.0) 🎨
 - ✅ **Vista Gantt Overview** - Timeline di tutti i progetti attivi con progress bar
-- ✅ **Gantt Workflow Progetto** - Vista orizzontale per singolo progetto con:
-  - Timeline giorni/settimane personalizzata
-  - Barre task colorate per stato (completata/in corso/pending/bloccata)
-  - Opacità per priorità
-  - Frecce di collegamento tra task in sequenza temporale
-  - Tooltip interattivi per modifica rapida
-  - Canvas con connessioni curve tra task
+- ✅ **Gantt Workflow Interattivo** - Vista orizzontale per singolo progetto con:
+  - 🖱️ **DRAG & DROP** - Trascina le barre per spostare le task nel tempo
+  - ↔️ **RESIZE** - Modifica la durata trascinando il bordo destro
+  - ⚡ **Update automatico** - Modifiche salvate immediatamente nel database
+  - Timeline giorni/settimane personalizzata e adattiva
+  - Barre task colorate per stato (🟢 completata / 🟡 in corso / 🔵 pending / 🔴 bloccata)
+  - Opacità per priorità (urgente 100%, bassa 70%)
+  - Icone priorità visibili (🔥 urgente, ⬆️ alta, ➡️ media, ⬇️ bassa)
+  - Tooltip informativi con nome task e assegnato
+  - Notifiche real-time per ogni modifica
 - ✅ **Carico Lavoro Utenti** - Vista dettagliata del carico di lavoro per ogni collaboratore
 - ✅ **Statistiche progetto** - Percentuale completamento, task scadute, task in corso
 - ✅ **Filtri per area** - Filtra i progetti per area di competenza
-- ✅ **Timeline dinamica** - Visualizza il flusso di lavoro nei prossimi 90 giorni
+- ✅ **Timeline dinamica** - Visualizza il flusso di lavoro con date flessibili
 
 ### 🎯 Aree Operative
 - **📝 Copywriting** - Gestione contenuti testuali e copy
 - **🎬 Video** - Produzione e editing video
 - **📢 ADV** - Campagne pubblicitarie e advertising
 - **🎨 Grafica** - Design e materiali grafici
+
+## 🎨 Gantt Interattivo - Come Usarlo
+
+### 🚀 Accesso Rapido
+1. **Login** → Progetti → **Visualizza Dettagli** (progetto) → **Visualizza Gantt Workflow**
+
+### 🖱️ Drag & Drop
+- **Trascina la barra** della task a sinistra o destra per spostare la data
+- Rilascia per salvare → update automatico ✅
+
+### ↔️ Resize
+- Porta il mouse sul **bordo destro** della barra
+- Trascina per **allungare o accorciare** la durata
+- Rilascia per salvare → ore stimate aggiornate ✅
+
+### 📊 Legenda
+- 🟢 **Verde** = Completata
+- 🟡 **Giallo** = In Corso
+- 🔵 **Blu** = Da Fare
+- 🔴 **Rosso** = Bloccata
+
+### 🎯 Priorità
+- **Opacità 100%** = Urgente 🔥
+- **Opacità 90%** = Alta/Media
+- **Opacità 70%** = Bassa
+
+📚 **Guida completa**: Vedi [GANTT-DRAG-DROP.md](GANTT-DRAG-DROP.md)
 
 ## 🗄️ Architettura Database
 
@@ -128,6 +158,30 @@ Un sistema completo di gestione progetti per agenzie, con tracking attività, ge
 - Video Editor: `video@agenzia.it` / `password123`
 - ADV Manager: `adv@agenzia.it` / `password123`
 - Graphic Designer: `grafica@agenzia.it` / `password123`
+
+### 🎬 Dati Demo per Test Gantt
+
+Abbiamo incluso un **progetto completo di esempio** per testare il Gantt interattivo:
+
+**📋 Progetto: "Campagna Marketing Q1 2026"**
+- Cliente: Mario Rossi - Rossi SRL
+- Periodo: 1 Feb - 31 Mar 2026
+- 7 task complete con:
+  - Stati diversi (completata, in corso, pending)
+  - Priorità varie (urgente, alta, media)
+  - Date distribuite su 2 mesi
+  - Durate realistiche (1-5 giorni)
+
+**🧪 Come testare il Gantt:**
+1. Login come admin
+2. Vai su **Progetti**
+3. Clicca su **"Campagna Marketing Q1 2026"**
+4. Clicca **"Visualizza Dettagli"**
+5. Clicca **"Visualizza Gantt Workflow"**
+6. **Trascina** le barre per spostare le task!
+7. **Ridimensiona** trascinando il bordo destro!
+
+📄 **File SQL**: `test-data.sql` (per ricaricare i dati demo)
 
 ### 🐛 Problemi con il Login?
 
