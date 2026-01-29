@@ -6,6 +6,8 @@ Un sistema completo di gestione progetti per agenzie, con tracking attività, ge
 
 - **Demo Live**: https://3000-iw5m59dn8m2cabpm0afmt-3844e1b6.sandbox.novita.ai
 - **API Health**: https://3000-iw5m59dn8m2cabpm0afmt-3844e1b6.sandbox.novita.ai/api/health
+- **Debug Login**: https://3000-iw5m59dn8m2cabpm0afmt-3844e1b6.sandbox.novita.ai/static/debug.html
+- **GitHub Repository**: https://github.com/doviland/gestionale
 
 ## ✨ Funzionalità Principali
 
@@ -105,6 +107,47 @@ Un sistema completo di gestione progetti per agenzie, con tracking attività, ge
 - **Vite** - Build tool veloce
 
 ## 🚀 Setup e Installazione
+
+### 🔐 Credenziali di Test
+
+**Amministratore:**
+- Email: `admin@agenzia.it`
+- Password: `admin123`
+
+**Collaboratori:**
+- Copywriter: `copywriter@agenzia.it` / `password123`
+- Video Editor: `video@agenzia.it` / `password123`
+- ADV Manager: `adv@agenzia.it` / `password123`
+- Graphic Designer: `grafica@agenzia.it` / `password123`
+
+### 🐛 Problemi con il Login?
+
+Se hai problemi con il login, segui questi passi:
+
+1. **Usa la pagina di debug**: https://3000-iw5m59dn8m2cabpm0afmt-3844e1b6.sandbox.novita.ai/static/debug.html
+   - Questa pagina testa il login e mostra eventuali errori
+   - Controlla la console del browser (F12)
+   - Verifica che il token venga salvato correttamente
+
+2. **Pulisci cache del browser**:
+   - Chrome/Edge: Ctrl+Shift+Delete → Cancella "Immagini e file in cache"
+   - Firefox: Ctrl+Shift+Delete → Cancella "Cache"
+   - Poi ricarica con Ctrl+Shift+R (hard refresh)
+
+3. **Usa modalità Incognito**:
+   - Apri una finestra privata/incognito
+   - Vai all'URL dell'applicazione
+   - Prova il login
+
+4. **Verifica LocalStorage**:
+   - Apri Console (F12) → scheda Application/Storage
+   - Controlla che localStorage contenga il token dopo il login
+   - Se non c'è, potrebbe essere un problema di sicurezza del browser
+
+5. **Reset Database Locale** (solo se usi in locale):
+   ```bash
+   npm run db:reset
+   ```
 
 ### Prerequisiti
 ```bash
