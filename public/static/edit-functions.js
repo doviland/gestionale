@@ -160,6 +160,17 @@ function renderProjectInfoTab(project, tasks, recurrence) {
                 </div>
             </div>
             
+            <!-- Pulsante Gantt -->
+            <div class="bg-gradient-to-r from-indigo-50 to-purple-50 border-2 border-indigo-200 rounded-lg p-4">
+                <button onclick="closeProjectDetailModal(); showProjectGantt(${project.id});" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-lg font-semibold text-lg">
+                    <i class="fas fa-chart-gantt mr-2"></i>Visualizza Gantt Workflow
+                </button>
+                <p class="text-sm text-gray-600 mt-2 text-center">
+                    <i class="fas fa-info-circle mr-1"></i>
+                    Timeline orizzontale con task collegate in sequenza
+                </p>
+            </div>
+            
             <!-- Progress Bar -->
             <div>
                 <div class="flex justify-between text-sm text-gray-600 mb-2">
