@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { logger } from 'hono/logger';
+import { serveStatic } from 'hono/cloudflare-workers';
 import { Bindings, Variables } from './types';
 
 // Import routes
@@ -20,6 +21,9 @@ app.use('/api/*', cors({
   allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowHeaders: ['Content-Type', 'Authorization'],
 }));
+
+// Serve static files
+app.use('/static/*', serveStatic({ root: './' }));
 
 // API Routes
 app.route('/api/auth', auth);
