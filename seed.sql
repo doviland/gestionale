@@ -5,14 +5,14 @@
 -- Admin user (password: admin123)
 -- Hash generato con bcrypt
 INSERT INTO users (email, password_hash, name, role, permissions, is_active) VALUES 
-('admin@agenzia.it', '$2a$10$rQ5Y8vG.4R7Cqf4nXkJ0dOZXvY6YqH8WZDdXKlZJ2zM7vKpN.8hIS', 'Amministratore', 'admin', '{"copywriting": true, "video": true, "adv": true, "grafica": true}', 1);
+('admin@agenzia.it', '$2b$10$v7r727Mn7jNPiyvB62ENfOsy/0gZ6iumXX5klnNFRDsKGdftNvYYq', 'Amministratore', 'admin', '{"copywriting": true, "video": true, "adv": true, "grafica": true}', 1);
 
 -- Collaboratori di esempio (password: password123)
 INSERT INTO users (email, password_hash, name, role, permissions, is_active) VALUES 
-('copywriter@agenzia.it', '$2a$10$rQ5Y8vG.4R7Cqf4nXkJ0dOZXvY6YqH8WZDdXKlZJ2zM7vKpN.8hIS', 'Mario Rossi', 'collaborator', '{"copywriting": true, "video": false, "adv": false, "grafica": false}', 1),
-('video@agenzia.it', '$2a$10$rQ5Y8vG.4R7Cqf4nXkJ0dOZXvY6YqH8WZDdXKlZJ2zM7vKpN.8hIS', 'Laura Bianchi', 'collaborator', '{"copywriting": false, "video": true, "adv": false, "grafica": false}', 1),
-('adv@agenzia.it', '$2a$10$rQ5Y8vG.4R7Cqf4nXkJ0dOZXvY6YqH8WZDdXKlZJ2zM7vKpN.8hIS', 'Giuseppe Verdi', 'collaborator', '{"copywriting": false, "video": false, "adv": true, "grafica": false}', 1),
-('grafica@agenzia.it', '$2a$10$rQ5Y8vG.4R7Cqf4nXkJ0dOZXvY6YqH8WZDdXKlZJ2zM7vKpN.8hIS', 'Sofia Russo', 'collaborator', '{"copywriting": false, "video": false, "adv": false, "grafica": true}', 1);
+('copywriter@agenzia.it', '$2b$10$P34D/zq/5P0XKHgnLFpAgOnicXla3obWg8y6vHHXWL4PllkyA99Te', 'Mario Rossi', 'collaborator', '{"copywriting": true, "video": false, "adv": false, "grafica": false}', 1),
+('video@agenzia.it', '$2b$10$P34D/zq/5P0XKHgnLFpAgOnicXla3obWg8y6vHHXWL4PllkyA99Te', 'Laura Bianchi', 'collaborator', '{"copywriting": false, "video": true, "adv": false, "grafica": false}', 1),
+('adv@agenzia.it', '$2b$10$P34D/zq/5P0XKHgnLFpAgOnicXla3obWg8y6vHHXWL4PllkyA99Te', 'Giuseppe Verdi', 'collaborator', '{"copywriting": false, "video": false, "adv": true, "grafica": false}', 1),
+('grafica@agenzia.it', '$2b$10$P34D/zq/5P0XKHgnLFpAgOnicXla3obWg8y6vHHXWL4PllkyA99Te', 'Sofia Russo', 'collaborator', '{"copywriting": false, "video": false, "adv": false, "grafica": true}', 1);
 
 -- Clienti di esempio
 INSERT INTO clients (name, email, phone, company, notes, status, created_by) VALUES 
