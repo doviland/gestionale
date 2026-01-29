@@ -322,6 +322,55 @@ async function createUser(data) {
     }
 }
 
+// Gantt API functions
+async function loadProjectGantt(projectId) {
+    try {
+        const response = await axios.get(`${API_URL}/gantt/project/${projectId}`);
+        return response.data;
+    } catch (error) {
+        console.error('Load project gantt error:', error);
+        throw error;
+    }
+}
+
+async function loadWorkload(start, end) {
+    try {
+        const params = new URLSearchParams();
+        if (start) params.append('start', start);
+        if (end) params.append('end', end);
+        const response = await axios.get(`${API_URL}/gantt/workload?${params}`);
+        return response.data;
+    } catch (error) {
+        console.error('Load workload error:', error);
+        throw error;
+    }
+}
+
+async function loadGanttOverview(status = 'active', area = null) {
+    try {
+        const params = new URLSearchParams({ status });
+        if (area) params.append('area', area);
+        const response = await axios.get(`${API_URL}/gantt/overview?${params}`);
+        return response.data;
+    } catch (error) {
+        console.error('Load gantt overview error:', error);
+        throw error;
+    }
+}
+
+async function loadUserGantt(userId, start, end) {
+    try {
+        const params = new URLSearchParams();
+        if (start) params.append('start', start);
+        if (end) params.append('end', end);
+        const response = await axios.get(`${API_URL}/gantt/user/${userId}?${params}`);
+        return response.data;
+    } catch (error) {
+        console.error('Load user gantt error:', error);
+        throw error;
+    }
+}
+
 // ========================================
 // VIEWS / UI RENDERING
 // ========================================
@@ -374,6 +423,8 @@ function renderNavMenu() {
     
     const menuItems = [
         { id: 'dashboard', icon: 'fa-home', label: 'Dashboard', show: true },
+        { id: 'gantt-overview', icon: 'fa-chart-gantt', label: 'Vista Gantt', show: isAdmin },
+        { id: 'workload', icon: 'fa-users-cog', label: 'Carico Lavoro', show: isAdmin },
         { id: 'projects', icon: 'fa-folder', label: 'Progetti', show: true },
         { id: 'tasks', icon: 'fa-tasks', label: 'Attività', show: true },
         { id: 'my-tasks', icon: 'fa-user-check', label: 'Le Mie Task', show: !isAdmin },
@@ -404,6 +455,12 @@ function renderView(view) {
     switch(view) {
         case 'dashboard':
             renderDashboard();
+            break;
+        case 'gantt-overview':
+            renderGanttOverview();
+            break;
+        case 'workload':
+            renderWorkload();
             break;
         case 'projects':
             renderProjects();
@@ -1401,6 +1458,250 @@ function showCreateUserModal() {
             // Error già gestito
         }
     };
+}
+
+// ========================================
+// GANTT VIEWS
+// ========================================
+
+function renderGanttOverview() {
+    const content = document.getElementById('main-content');
+    content.innerHTML = '<div class="text-center py-8"><i class="fas fa-spinner fa-spin text-4xl text-blue-600"></i></div>';
+    
+    loadGanttOverview('active').then(data => {
+        content.innerHTML = `
+            <div class="mb-8 flex justify-between items-center">
+                <div>
+                    <h1 class="text-3xl font-bold text-gray-800">
+                        <i class="fas fa-chart-gantt mr-3"></i>Vista Gantt - Tutti i Progetti
+                    </h1>
+                    <p class="text-gray-600 mt-2">Timeline completa di tutti i progetti attivi</p>
+                </div>
+                <div class="flex gap-2">
+                    <select id="gantt-area-filter" onchange="filterGanttOverview()" class="px-4 py-2 border rounded-lg">
+                        <option value="">Tutte le aree</option>
+                        <option value="copywriting">Copywriting</option>
+                        <option value="video">Video</option>
+                        <option value="adv">ADV</option>
+                        <option value="grafica">Grafica</option>
+                    </select>
+                </div>
+            </div>
+            
+            <!-- Stats Summary -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                <div class="bg-blue-50 p-6 rounded-lg border border-blue-200">
+                    <p class="text-sm text-blue-800 font-medium">Progetti Attivi</p>
+                    <p class="text-3xl font-bold text-blue-600">${data.stats.total_projects}</p>
+                </div>
+                <div class="bg-purple-50 p-6 rounded-lg border border-purple-200">
+                    <p class="text-sm text-purple-800 font-medium">Task Totali</p>
+                    <p class="text-3xl font-bold text-purple-600">${data.stats.total_tasks}</p>
+                </div>
+                <div class="bg-green-50 p-6 rounded-lg border border-green-200">
+                    <p class="text-sm text-green-800 font-medium">Completamento</p>
+                    <p class="text-3xl font-bold text-green-600">${data.stats.completion_rate}%</p>
+                </div>
+                <div class="bg-red-50 p-6 rounded-lg border border-red-200">
+                    <p class="text-sm text-red-800 font-medium">Task Scadute</p>
+                    <p class="text-3xl font-bold text-red-600">${data.stats.overdue_tasks}</p>
+                </div>
+            </div>
+            
+            <!-- Projects Gantt -->
+            <div class="space-y-6">
+                ${data.projects.map(project => renderProjectGanttCard(project)).join('')}
+            </div>
+        `;
+    });
+}
+
+function renderProjectGanttCard(project) {
+    const completionRate = project.total_tasks > 0 
+        ? Math.round((project.completed_tasks / project.total_tasks) * 100) 
+        : 0;
+    
+    return `
+        <div class="bg-white rounded-lg shadow-lg overflow-hidden">
+            <div class="p-6 border-b bg-gray-50">
+                <div class="flex justify-between items-start">
+                    <div class="flex-1">
+                        <div class="flex items-center gap-3 mb-2">
+                            <h3 class="text-xl font-bold text-gray-800">${project.name}</h3>
+                            ${getAreaBadge(project.area)}
+                            ${getStatusBadge(project.status)}
+                        </div>
+                        <p class="text-sm text-gray-600">
+                            <i class="fas fa-user mr-1"></i>${project.client_name}
+                            ${project.start_date ? `<span class="ml-4"><i class="fas fa-calendar mr-1"></i>${formatDate(project.start_date)} → ${formatDate(project.end_date)}</span>` : ''}
+                        </p>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-2xl font-bold text-gray-800">${completionRate}%</div>
+                        <div class="text-xs text-gray-600">${project.completed_tasks}/${project.total_tasks} task</div>
+                        ${project.overdue_tasks > 0 ? `<div class="text-xs text-red-600 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i>${project.overdue_tasks} scadute</div>` : ''}
+                    </div>
+                </div>
+                
+                <!-- Progress Bar -->
+                <div class="mt-4">
+                    <div class="w-full bg-gray-200 rounded-full h-3">
+                        <div class="bg-green-600 h-3 rounded-full transition-all" style="width: ${completionRate}%"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Tasks Timeline -->
+            <div class="p-6">
+                <h4 class="font-semibold text-gray-700 mb-4">Timeline Task</h4>
+                <div class="space-y-3">
+                    ${project.tasks.slice(0, 10).map(task => `
+                        <div class="flex items-center gap-3 p-3 bg-gray-50 rounded hover:bg-gray-100 transition">
+                            <div class="flex-shrink-0">
+                                <i class="fas ${task.status === 'completed' ? 'fa-check-circle text-green-600' : task.status === 'in_progress' ? 'fa-circle-notch text-blue-600' : 'fa-circle text-gray-400'}"></i>
+                            </div>
+                            <div class="flex-1">
+                                <div class="font-medium text-gray-800">${task.title}</div>
+                                <div class="text-xs text-gray-600">
+                                    ${task.assigned_to_name ? `<i class="fas fa-user mr-1"></i>${task.assigned_to_name}` : '<i class="fas fa-user-slash mr-1"></i>Non assegnata'}
+                                </div>
+                            </div>
+                            <div class="flex-shrink-0 text-right">
+                                ${getPriorityBadge(task.priority)}
+                                ${task.due_date ? `<div class="text-xs text-gray-600 mt-1">${formatDate(task.due_date)}</div>` : ''}
+                            </div>
+                        </div>
+                    `).join('')}
+                    ${project.tasks.length > 10 ? `<div class="text-center text-sm text-gray-500 pt-2">... e altre ${project.tasks.length - 10} task</div>` : ''}
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function renderWorkload() {
+    const content = document.getElementById('main-content');
+    content.innerHTML = '<div class="text-center py-8"><i class="fas fa-spinner fa-spin text-4xl text-blue-600"></i></div>';
+    
+    // Default: prossimi 90 giorni
+    const today = new Date();
+    const start = today.toISOString().split('T')[0];
+    const endDate = new Date(today.getTime() + 90 * 24 * 60 * 60 * 1000);
+    const end = endDate.toISOString().split('T')[0];
+    
+    loadWorkload(start, end).then(data => {
+        content.innerHTML = `
+            <div class="mb-8">
+                <h1 class="text-3xl font-bold text-gray-800">
+                    <i class="fas fa-users-cog mr-3"></i>Carico Lavoro Collaboratori
+                </h1>
+                <p class="text-gray-600 mt-2">Visualizza il carico di lavoro di ogni collaboratore nei prossimi 90 giorni</p>
+                <p class="text-sm text-gray-500 mt-1">
+                    <i class="fas fa-calendar mr-1"></i>
+                    Dal ${formatDate(data.timeline.start)} al ${formatDate(data.timeline.end)}
+                </p>
+            </div>
+            
+            <!-- Workload Cards -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                ${data.workload.map(w => renderWorkloadCard(w)).join('')}
+            </div>
+        `;
+    });
+}
+
+function renderWorkloadCard(workload) {
+    const user = workload.user;
+    const stats = workload.stats;
+    const tasks = workload.tasks;
+    
+    // Calcola workload percentuale
+    const workloadPercent = stats.total > 0 ? Math.round(((stats.pending + stats.in_progress) / stats.total) * 100) : 0;
+    const workloadColor = workloadPercent > 80 ? 'red' : workloadPercent > 50 ? 'yellow' : 'green';
+    
+    // Filtra aree permesse
+    const areas = [];
+    if (user.permissions.copywriting) areas.push('Copywriting');
+    if (user.permissions.video) areas.push('Video');
+    if (user.permissions.adv) areas.push('ADV');
+    if (user.permissions.grafica) areas.push('Grafica');
+    
+    return `
+        <div class="bg-white rounded-lg shadow-lg overflow-hidden">
+            <div class="p-6 border-b bg-gradient-to-r from-${workloadColor}-50 to-${workloadColor}-100">
+                <div class="flex items-center justify-between mb-4">
+                    <div>
+                        <h3 class="text-xl font-bold text-gray-800">${user.name}</h3>
+                        <p class="text-sm text-gray-600">${user.email}</p>
+                        <div class="flex gap-2 mt-2">
+                            ${areas.map(a => `<span class="text-xs px-2 py-1 bg-white rounded">${a}</span>`).join('')}
+                        </div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-3xl font-bold text-${workloadColor}-600">${stats.total}</div>
+                        <div class="text-xs text-gray-600">Task totali</div>
+                    </div>
+                </div>
+                
+                <!-- Stats Grid -->
+                <div class="grid grid-cols-4 gap-2 text-center">
+                    <div class="bg-white p-2 rounded">
+                        <div class="text-lg font-bold text-gray-600">${stats.pending}</div>
+                        <div class="text-xs text-gray-500">Pending</div>
+                    </div>
+                    <div class="bg-white p-2 rounded">
+                        <div class="text-lg font-bold text-blue-600">${stats.in_progress}</div>
+                        <div class="text-xs text-gray-500">In Corso</div>
+                    </div>
+                    <div class="bg-white p-2 rounded">
+                        <div class="text-lg font-bold text-green-600">${stats.completed}</div>
+                        <div class="text-xs text-gray-500">Completate</div>
+                    </div>
+                    <div class="bg-white p-2 rounded">
+                        <div class="text-lg font-bold text-red-600">${stats.overdue}</div>
+                        <div class="text-xs text-gray-500">Scadute</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Task List -->
+            <div class="p-6 max-h-96 overflow-y-auto">
+                <h4 class="font-semibold text-gray-700 mb-3">Task Assegnate</h4>
+                ${tasks.length === 0 ? '<p class="text-gray-500 text-center py-4">Nessuna task assegnata</p>' : ''}
+                <div class="space-y-2">
+                    ${tasks.slice(0, 15).map(task => `
+                        <div class="flex items-start gap-2 p-2 bg-gray-50 rounded text-sm hover:bg-gray-100 transition">
+                            <div class="flex-shrink-0 mt-1">
+                                ${getStatusBadge(task.status)}
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium text-gray-800 truncate">${task.title}</div>
+                                <div class="text-xs text-gray-600">
+                                    ${task.project_name} - ${task.client_name}
+                                </div>
+                            </div>
+                            <div class="flex-shrink-0 text-right">
+                                ${getPriorityBadge(task.priority)}
+                                ${task.due_date ? `<div class="text-xs text-gray-600 mt-1">${formatDate(task.due_date)}</div>` : ''}
+                            </div>
+                        </div>
+                    `).join('')}
+                    ${tasks.length > 15 ? `<div class="text-center text-xs text-gray-500 pt-2">... e altre ${tasks.length - 15} task</div>` : ''}
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function filterGanttOverview() {
+    const area = document.getElementById('gantt-area-filter').value;
+    const content = document.getElementById('main-content');
+    content.innerHTML = '<div class="text-center py-8"><i class="fas fa-spinner fa-spin text-4xl text-blue-600"></i></div>';
+    
+    loadGanttOverview('active', area || null).then(data => {
+        // Re-render con gli stessi controlli
+        renderGanttOverview();
+    });
 }
 
 // ========================================

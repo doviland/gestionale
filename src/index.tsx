@@ -11,6 +11,7 @@ import templates from './routes/templates';
 import projects from './routes/projects';
 import tasks from './routes/tasks';
 import dashboard from './routes/dashboard';
+import gantt from './routes/gantt';
 
 const app = new Hono<{ Bindings: Bindings; Variables: Variables }>();
 
@@ -32,6 +33,7 @@ app.route('/api/templates', templates);
 app.route('/api/projects', projects);
 app.route('/api/tasks', tasks);
 app.route('/api/dashboard', dashboard);
+app.route('/api/gantt', gantt);
 
 // Health check
 app.get('/api/health', (c) => {
