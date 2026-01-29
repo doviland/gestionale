@@ -1,24 +1,34 @@
 // ========================================
-// PROJECT GANTT HORIZONTAL WORKFLOW
-// Visualizzazione Gantt orizzontale con task collegate
+// GANTT WORKFLOW INTERATTIVO CON DRAG & DROP
+// Versione 2.0 con spostamento manuale task
 // ========================================
 
 /**
- * Mostra Gantt orizzontale del progetto
+ * State globale per drag & drop
+ */
+const GANTT_STATE = {
+    draggedTask: null,
+    dragStartX: 0,
+    dragStartDate: null,
+    timelineStart: null,
+    dayWidth: 0,
+    isDragging: false
+};
+
+/**
+ * Mostra Gantt orizzontale interattivo
  */
 async function showProjectGantt(projectId) {
-    console.log('📊 Apertura Gantt progetto:', projectId);
+    console.log('📊 Apertura Gantt interattivo progetto:', projectId);
     
     try {
-        // Carica dettagli progetto e task
         const response = await axios.get(`${API_URL}/projects/${projectId}`);
         const { project, tasks } = response.data;
         
         console.log('✅ Progetto caricato per Gantt:', project);
-        console.log('📝 Task:', tasks);
+        console.log('📝 Task:', tasks.length);
         
-        // Mostra modal Gantt
-        showGanttModal(project, tasks);
+        showGanttModalInteractive(project, tasks);
         
     } catch (error) {
         console.error('❌ Errore caricamento Gantt:', error);
@@ -27,31 +37,27 @@ async function showProjectGantt(projectId) {
 }
 
 /**
- * Modal Gantt orizzontale
+ * Modal Gantt interattivo
  */
-function showGanttModal(project, tasks) {
-    // Calcola date min/max dal progetto
+function showGanttModalInteractive(project, tasks) {
+    // Calcola date range
     let startDate = project.start_date ? new Date(project.start_date) : new Date();
     let endDate = project.end_date ? new Date(project.end_date) : new Date();
     
-    // Se non ci sono date nel progetto, usa le task
     if (!project.start_date && tasks.length > 0) {
-        const taskDates = tasks
-            .filter(t => t.due_date)
-            .map(t => new Date(t.due_date));
-        
+        const taskDates = tasks.filter(t => t.due_date).map(t => new Date(t.due_date));
         if (taskDates.length > 0) {
             startDate = new Date(Math.min(...taskDates));
             endDate = new Date(Math.max(...taskDates));
         }
     }
     
-    // Aggiungi margine
     startDate.setDate(startDate.getDate() - 5);
-    endDate.setDate(endDate.getDate() + 5);
+    endDate.setDate(endDate.getDate() + 15);
     
     const modal = document.createElement('div');
     modal.className = 'fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4';
+    modal.id = 'gantt-modal';
     modal.innerHTML = `
         <div class="bg-white rounded-lg w-full h-[90vh] max-w-7xl overflow-hidden flex flex-col">
             <!-- Header -->
@@ -59,12 +65,15 @@ function showGanttModal(project, tasks) {
                 <div class="flex justify-between items-center">
                     <div>
                         <h2 class="text-3xl font-bold mb-2">
-                            <i class="fas fa-chart-gantt mr-2"></i>Gantt Workflow
+                            <i class="fas fa-chart-gantt mr-2"></i>Gantt Workflow Interattivo
                         </h2>
                         <p class="text-indigo-100">${project.name} - ${project.client_name}</p>
-                        <div class="mt-2 flex gap-2">
+                        <div class="mt-2 flex gap-2 items-center">
                             ${getAreaBadge(project.area)}
                             ${getStatusBadge(project.status)}
+                            <span class="bg-white bg-opacity-20 px-3 py-1 rounded-full text-xs">
+                                <i class="fas fa-mouse-pointer mr-1"></i>Trascina le barre per spostare le task
+                            </span>
                         </div>
                     </div>
                     <button onclick="closeGanttModal()" class="text-white hover:text-gray-200">
@@ -74,23 +83,25 @@ function showGanttModal(project, tasks) {
             </div>
             
             <!-- Gantt Content -->
-            <div class="flex-1 overflow-auto p-6 bg-gray-50">
+            <div class="flex-1 overflow-auto p-6 bg-gray-50" id="gantt-scroll-container">
                 ${tasks.length === 0 ? `
                     <div class="text-center py-20">
                         <i class="fas fa-tasks text-6xl text-gray-300 mb-4"></i>
                         <p class="text-xl text-gray-500">Nessuna task in questo progetto</p>
-                        <p class="text-gray-400 mt-2">Aggiungi task dal dettaglio progetto</p>
                     </div>
-                ` : renderGanttChart(tasks, startDate, endDate)}
+                ` : renderGanttChartInteractive(tasks, startDate, endDate, project.id)}
             </div>
             
             <!-- Footer -->
             <div class="flex-shrink-0 bg-white border-t p-4 flex justify-between items-center">
                 <div class="text-sm text-gray-600">
                     <i class="fas fa-info-circle mr-2"></i>
-                    ${tasks.length} task totali • 
-                    ${tasks.filter(t => t.status === 'completed').length} completate • 
-                    ${tasks.filter(t => t.status === 'in_progress').length} in corso
+                    ${tasks.length} task • 
+                    ${tasks.filter(t => t.status === 'completed').length} completate
+                    <span class="ml-4 text-indigo-600">
+                        <i class="fas fa-hand-pointer mr-1"></i>
+                        Trascina le barre per modificare le date
+                    </span>
                 </div>
                 <button onclick="closeGanttModal()" class="px-6 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg">
                     <i class="fas fa-times mr-2"></i>Chiudi
@@ -101,26 +112,32 @@ function showGanttModal(project, tasks) {
     
     document.body.appendChild(modal);
     
-    // Se ci sono task connesse, disegna le frecce dopo render
-    setTimeout(() => drawTaskConnections(tasks), 100);
+    // Salva dati per accesso globale
+    window.GANTT_PROJECT = project;
+    window.GANTT_TASKS = tasks;
+    window.GANTT_START_DATE = startDate;
+    window.GANTT_END_DATE = endDate;
+    
+    // Setup drag & drop dopo render
+    setTimeout(() => setupDragAndDrop(startDate, tasks), 100);
 }
 
 /**
- * Render del Gantt chart orizzontale
+ * Render Gantt interattivo
  */
-function renderGanttChart(tasks, startDate, endDate) {
+function renderGanttChartInteractive(tasks, startDate, endDate, projectId) {
     const totalDays = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24));
-    const dayWidth = Math.max(40, Math.min(100, 4000 / totalDays)); // Adattivo
+    const dayWidth = Math.max(40, Math.min(100, 4000 / totalDays));
     
-    // Ordina task per priorità e data
+    // Salva per drag & drop
+    GANTT_STATE.dayWidth = dayWidth;
+    GANTT_STATE.timelineStart = startDate;
+    
     const sortedTasks = [...tasks].sort((a, b) => {
         const priorityOrder = { urgent: 4, high: 3, medium: 2, low: 1 };
         const priorityDiff = (priorityOrder[b.priority] || 0) - (priorityOrder[a.priority] || 0);
         if (priorityDiff !== 0) return priorityDiff;
-        
-        if (a.due_date && b.due_date) {
-            return new Date(a.due_date) - new Date(b.due_date);
-        }
+        if (a.due_date && b.due_date) return new Date(a.due_date) - new Date(b.due_date);
         return 0;
     });
     
@@ -137,25 +154,22 @@ function renderGanttChart(tasks, startDate, endDate) {
             </div>
             
             <!-- Task Rows -->
-            <div class="space-y-4 relative" id="gantt-task-container">
-                ${sortedTasks.map((task, index) => renderGanttTask(task, index, startDate, totalDays, dayWidth)).join('')}
+            <div class="space-y-4 relative" id="gantt-task-container" data-project-id="${projectId}">
+                ${sortedTasks.map((task, index) => renderGanttTaskDraggable(task, index, startDate, totalDays, dayWidth)).join('')}
             </div>
-            
-            <!-- Canvas per frecce connessioni -->
-            <canvas id="gantt-connections-canvas" class="absolute top-0 left-0 pointer-events-none" style="z-index: 1;"></canvas>
         </div>
     `;
 }
 
 /**
- * Generate timeline header con giorni/settimane
+ * Timeline header
  */
 function generateTimelineHeader(startDate, endDate, dayWidth) {
     const days = [];
     const currentDate = new Date(startDate);
     
     while (currentDate <= endDate) {
-        const isWeekStart = currentDate.getDay() === 1; // Lunedì
+        const isWeekStart = currentDate.getDay() === 1;
         const dayLabel = currentDate.getDate();
         const monthLabel = currentDate.toLocaleDateString('it-IT', { month: 'short' });
         
@@ -173,15 +187,13 @@ function generateTimelineHeader(startDate, endDate, dayWidth) {
 }
 
 /**
- * Render singola task nel Gantt
+ * Render task draggable
  */
-function renderGanttTask(task, index, startDate, totalDays, dayWidth) {
-    // Calcola posizione e larghezza
+function renderGanttTaskDraggable(task, index, startDate, totalDays, dayWidth) {
     let taskStart = task.due_date ? new Date(task.due_date) : null;
-    let taskDuration = task.estimated_hours ? Math.ceil(task.estimated_hours / 8) : 1; // Converti ore in giorni
+    let taskDuration = task.estimated_hours ? Math.ceil(task.estimated_hours / 8) : 1;
     
     if (!taskStart) {
-        // Task senza data: posiziona all'inizio
         taskStart = new Date(startDate);
         taskDuration = 1;
     }
@@ -190,7 +202,6 @@ function renderGanttTask(task, index, startDate, totalDays, dayWidth) {
     const position = Math.max(0, daysFromStart * dayWidth);
     const width = taskDuration * dayWidth;
     
-    // Colore barra in base allo stato
     let barColor = 'bg-blue-500';
     let barBorder = 'border-blue-600';
     if (task.status === 'completed') {
@@ -204,7 +215,6 @@ function renderGanttTask(task, index, startDate, totalDays, dayWidth) {
         barBorder = 'border-red-600';
     }
     
-    // Opacità in base alla priorità
     let opacity = 'opacity-90';
     if (task.priority === 'urgent') opacity = 'opacity-100';
     if (task.priority === 'low') opacity = 'opacity-70';
@@ -226,25 +236,194 @@ function renderGanttTask(task, index, startDate, totalDays, dayWidth) {
                 </div>
             </div>
             
-            <!-- Timeline Bar -->
+            <!-- Timeline Bar (DRAGGABLE) -->
             <div class="flex-1 relative" style="min-width: ${totalDays * dayWidth}px; height: 40px;">
                 <div 
-                    class="absolute ${barColor} ${barBorder} ${opacity} border-2 rounded-lg shadow-md cursor-pointer transition-all hover:scale-105"
+                    class="gantt-bar absolute ${barColor} ${barBorder} ${opacity} border-2 rounded-lg shadow-md cursor-move transition-shadow hover:shadow-xl"
                     style="left: ${position}px; width: ${width}px; height: 32px; top: 4px;"
                     data-task-id="${task.id}"
-                    onclick="viewTaskTooltip(event, ${task.id})"
-                    title="${task.title}"
+                    data-initial-left="${position}"
+                    data-task-duration="${taskDuration}"
+                    draggable="true"
+                    title="Trascina per spostare • ${task.title}"
                 >
-                    <div class="px-3 py-1 text-white text-xs font-medium truncate">
-                        ${task.title}
+                    <div class="px-3 py-1 text-white text-xs font-medium truncate pointer-events-none">
+                        <i class="fas fa-grip-vertical mr-2"></i>${task.title}
                     </div>
                     
-                    <!-- Connettore destro (per frecce) -->
-                    <div class="task-connector-right absolute -right-1 top-1/2 transform -translate-y-1/2 w-2 h-2 bg-white border-2 ${barBorder} rounded-full opacity-0 group-hover:opacity-100"></div>
+                    <!-- Resize handle destro -->
+                    <div class="resize-handle absolute right-0 top-0 h-full w-2 cursor-ew-resize bg-white bg-opacity-50 hover:bg-opacity-100" data-task-id="${task.id}"></div>
                 </div>
             </div>
         </div>
     `;
+}
+
+/**
+ * Setup Drag & Drop
+ */
+function setupDragAndDrop(startDate, tasks) {
+    const container = document.getElementById('gantt-task-container');
+    if (!container) return;
+    
+    const bars = container.querySelectorAll('.gantt-bar');
+    
+    bars.forEach(bar => {
+        // Drag start
+        bar.addEventListener('dragstart', (e) => {
+            const taskId = parseInt(bar.getAttribute('data-task-id'));
+            GANTT_STATE.draggedTask = tasks.find(t => t.id === taskId);
+            GANTT_STATE.dragStartX = e.clientX;
+            GANTT_STATE.isDragging = true;
+            
+            bar.style.opacity = '0.5';
+            console.log('🖱️ Drag started:', GANTT_STATE.draggedTask.title);
+        });
+        
+        // Drag end
+        bar.addEventListener('dragend', async (e) => {
+            bar.style.opacity = '1';
+            
+            if (!GANTT_STATE.isDragging || !GANTT_STATE.draggedTask) return;
+            
+            const deltaX = e.clientX - GANTT_STATE.dragStartX;
+            const daysMoved = Math.round(deltaX / GANTT_STATE.dayWidth);
+            
+            if (daysMoved === 0) {
+                console.log('❌ Nessun movimento');
+                GANTT_STATE.isDragging = false;
+                return;
+            }
+            
+            console.log('📅 Giorni spostati:', daysMoved);
+            
+            // Calcola nuova data
+            const oldDate = new Date(GANTT_STATE.draggedTask.due_date || startDate);
+            const newDate = new Date(oldDate);
+            newDate.setDate(newDate.getDate() + daysMoved);
+            
+            console.log('📆 Nuova data:', newDate.toISOString().split('T')[0]);
+            
+            // Aggiorna task
+            await updateTaskDate(GANTT_STATE.draggedTask.id, newDate.toISOString().split('T')[0]);
+            
+            GANTT_STATE.isDragging = false;
+            GANTT_STATE.draggedTask = null;
+        });
+        
+        // Drag over (per permettere drop)
+        bar.addEventListener('dragover', (e) => {
+            e.preventDefault();
+        });
+    });
+    
+    // Setup resize handles
+    setupResizeHandles(startDate, tasks);
+}
+
+/**
+ * Setup resize handles per modificare durata
+ */
+function setupResizeHandles(startDate, tasks) {
+    const handles = document.querySelectorAll('.resize-handle');
+    
+    handles.forEach(handle => {
+        let isResizing = false;
+        let startX = 0;
+        let startWidth = 0;
+        let bar = null;
+        
+        handle.addEventListener('mousedown', (e) => {
+            e.stopPropagation();
+            e.preventDefault();
+            
+            isResizing = true;
+            startX = e.clientX;
+            bar = handle.closest('.gantt-bar');
+            startWidth = bar.offsetWidth;
+            
+            console.log('↔️ Resize started');
+            
+            const mousemove = (e) => {
+                if (!isResizing) return;
+                
+                const deltaX = e.clientX - startX;
+                const newWidth = Math.max(GANTT_STATE.dayWidth, startWidth + deltaX);
+                bar.style.width = `${newWidth}px`;
+            };
+            
+            const mouseup = async (e) => {
+                if (!isResizing) return;
+                
+                isResizing = false;
+                document.removeEventListener('mousemove', mousemove);
+                document.removeEventListener('mouseup', mouseup);
+                
+                const deltaX = e.clientX - startX;
+                const newWidth = Math.max(GANTT_STATE.dayWidth, startWidth + deltaX);
+                const newDuration = Math.max(1, Math.round(newWidth / GANTT_STATE.dayWidth));
+                
+                console.log('⏱️ Nuova durata (giorni):', newDuration);
+                
+                const taskId = parseInt(bar.getAttribute('data-task-id'));
+                const task = tasks.find(t => t.id === taskId);
+                const newEstimatedHours = newDuration * 8;
+                
+                await updateTaskDuration(taskId, newEstimatedHours);
+            };
+            
+            document.addEventListener('mousemove', mousemove);
+            document.addEventListener('mouseup', mouseup);
+        });
+    });
+}
+
+/**
+ * Aggiorna data task sul backend
+ */
+async function updateTaskDate(taskId, newDate) {
+    console.log('💾 Aggiornamento data task:', taskId, '→', newDate);
+    
+    try {
+        await axios.put(`${API_URL}/tasks/${taskId}`, {
+            due_date: newDate
+        });
+        
+        showNotification('Data task aggiornata!', 'success');
+        
+        // Ricarica Gantt
+        const projectId = document.getElementById('gantt-task-container').getAttribute('data-project-id');
+        closeGanttModal();
+        setTimeout(() => showProjectGantt(projectId), 300);
+        
+    } catch (error) {
+        console.error('❌ Errore aggiornamento data:', error);
+        showNotification('Errore nell\'aggiornamento della data', 'error');
+    }
+}
+
+/**
+ * Aggiorna durata task sul backend
+ */
+async function updateTaskDuration(taskId, newEstimatedHours) {
+    console.log('💾 Aggiornamento durata task:', taskId, '→', newEstimatedHours, 'ore');
+    
+    try {
+        await axios.put(`${API_URL}/tasks/${taskId}`, {
+            estimated_hours: newEstimatedHours
+        });
+        
+        showNotification(`Durata aggiornata: ${newEstimatedHours}h (${Math.ceil(newEstimatedHours / 8)} giorni)`, 'success');
+        
+        // Ricarica Gantt
+        const projectId = document.getElementById('gantt-task-container').getAttribute('data-project-id');
+        closeGanttModal();
+        setTimeout(() => showProjectGantt(projectId), 300);
+        
+    } catch (error) {
+        console.error('❌ Errore aggiornamento durata:', error);
+        showNotification('Errore nell\'aggiornamento della durata', 'error');
+    }
 }
 
 /**
@@ -261,125 +440,19 @@ function getPriorityIcon(priority) {
 }
 
 /**
- * Disegna connessioni tra task (frecce)
- * Basato su sequenza temporale
- */
-function drawTaskConnections(tasks) {
-    const canvas = document.getElementById('gantt-connections-canvas');
-    if (!canvas) return;
-    
-    const container = document.getElementById('gantt-task-container');
-    if (!container) return;
-    
-    // Setup canvas size
-    canvas.width = container.offsetWidth;
-    canvas.height = container.offsetHeight;
-    
-    const ctx = canvas.getContext('2d');
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    
-    // Ordina task per data
-    const sortedTasks = [...tasks]
-        .filter(t => t.due_date)
-        .sort((a, b) => new Date(a.due_date) - new Date(b.due_date));
-    
-    // Disegna frecce tra task sequenziali
-    for (let i = 0; i < sortedTasks.length - 1; i++) {
-        const task1 = sortedTasks[i];
-        const task2 = sortedTasks[i + 1];
-        
-        const el1 = document.querySelector(`[data-task-id="${task1.id}"] > div:last-child > div`);
-        const el2 = document.querySelector(`[data-task-id="${task2.id}"] > div:last-child > div`);
-        
-        if (el1 && el2) {
-            const rect1 = el1.getBoundingClientRect();
-            const rect2 = el2.getBoundingClientRect();
-            const containerRect = container.getBoundingClientRect();
-            
-            const x1 = rect1.right - containerRect.left;
-            const y1 = rect1.top + rect1.height / 2 - containerRect.top;
-            const x2 = rect2.left - containerRect.left;
-            const y2 = rect2.top + rect2.height / 2 - containerRect.top;
-            
-            // Disegna freccia curva
-            ctx.strokeStyle = '#94a3b8';
-            ctx.lineWidth = 2;
-            ctx.setLineDash([5, 3]);
-            
-            ctx.beginPath();
-            ctx.moveTo(x1, y1);
-            
-            // Curva bezier
-            const cp1x = x1 + (x2 - x1) / 3;
-            const cp2x = x1 + 2 * (x2 - x1) / 3;
-            ctx.bezierCurveTo(cp1x, y1, cp2x, y2, x2, y2);
-            
-            ctx.stroke();
-            
-            // Punta freccia
-            ctx.setLineDash([]);
-            ctx.beginPath();
-            ctx.moveTo(x2, y2);
-            ctx.lineTo(x2 - 8, y2 - 4);
-            ctx.lineTo(x2 - 8, y2 + 4);
-            ctx.closePath();
-            ctx.fillStyle = '#94a3b8';
-            ctx.fill();
-        }
-    }
-}
-
-/**
- * Mostra tooltip task al click
- */
-function viewTaskTooltip(event, taskId) {
-    event.stopPropagation();
-    
-    // Rimuovi tooltip esistenti
-    document.querySelectorAll('.task-tooltip').forEach(t => t.remove());
-    
-    // Cerca task nei dati
-    const taskElement = event.currentTarget;
-    const taskRow = taskElement.closest('[data-task-id]');
-    
-    // Crea tooltip
-    const tooltip = document.createElement('div');
-    tooltip.className = 'task-tooltip absolute bg-white border-2 border-gray-300 rounded-lg shadow-2xl p-4 z-50';
-    tooltip.style.left = `${event.pageX + 10}px`;
-    tooltip.style.top = `${event.pageY - 50}px`;
-    tooltip.innerHTML = `
-        <div class="text-sm space-y-2">
-            <div class="font-bold text-gray-900">Task ID: ${taskId}</div>
-            <div class="flex gap-2">
-                <button onclick="editTask(${taskId}); document.querySelectorAll('.task-tooltip').forEach(t => t.remove());" class="px-3 py-1 bg-blue-600 text-white rounded text-xs">
-                    <i class="fas fa-edit mr-1"></i>Modifica
-                </button>
-                <button onclick="document.querySelectorAll('.task-tooltip').forEach(t => t.remove());" class="px-3 py-1 bg-gray-600 text-white rounded text-xs">
-                    Chiudi
-                </button>
-            </div>
-        </div>
-    `;
-    
-    document.body.appendChild(tooltip);
-    
-    // Chiudi al click fuori
-    setTimeout(() => {
-        document.addEventListener('click', function closeTooltip(e) {
-            if (!tooltip.contains(e.target)) {
-                tooltip.remove();
-                document.removeEventListener('click', closeTooltip);
-            }
-        });
-    }, 100);
-}
-
-/**
  * Chiudi modal Gantt
  */
 function closeGanttModal() {
-    const modals = document.querySelectorAll('.fixed.inset-0');
-    modals.forEach(modal => modal.remove());
+    const modal = document.getElementById('gantt-modal');
+    if (modal) {
+        modal.remove();
+    }
+    
+    // Cleanup state
+    GANTT_STATE.draggedTask = null;
+    GANTT_STATE.isDragging = false;
+    window.GANTT_PROJECT = null;
+    window.GANTT_TASKS = null;
 }
 
-console.log('✅ Project Gantt Horizontal Workflow module loaded');
+console.log('✅ Gantt Workflow Interattivo v2.0 loaded - Drag & Drop enabled');
