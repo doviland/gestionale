@@ -1,236 +1,434 @@
 // ========================================
-// FUNZIONI DI MODIFICA E GESTIONE
+// PROJECT DETAIL & EDITING - Gestionale Agenzia
 // ========================================
 
 /**
- * Visualizza dettaglio progetto con possibilità di modifica
+ * Visualizza dettaglio progetto con possibilità di editing
  */
 async function viewProjectDetail(projectId) {
+    console.log('📋 Apertura dettaglio progetto:', projectId);
+    
     try {
-        showNotification('Caricamento progetto...', 'info');
+        // Carica dettagli progetto
         const response = await axios.get(`${API_URL}/projects/${projectId}`);
-        const { project, tasks } = response.data;
+        const { project, tasks, recurrence } = response.data;
         
-        // Mostra modal con dettagli
-        showProjectDetailModal(project, tasks);
+        console.log('✅ Progetto caricato:', project);
+        console.log('📝 Task del progetto:', tasks);
+        
+        // Mostra modal dettaglio
+        showProjectDetailModal(project, tasks, recurrence);
+        
     } catch (error) {
-        console.error('Error loading project:', error);
+        console.error('❌ Errore caricamento progetto:', error);
         showNotification('Errore nel caricamento del progetto', 'error');
     }
 }
 
 /**
- * Modal dettaglio progetto
+ * Modal dettaglio progetto con tabs
  */
-function showProjectDetailModal(project, tasks) {
-    const isAdmin = APP.user && APP.user.role === 'admin';
+function showProjectDetailModal(project, tasks, recurrence) {
+    const isAdmin = APP.user.role === 'admin';
     
-    const tasksHtml = tasks.map(task => `
-        <div class="border-b border-gray-200 py-3 hover:bg-gray-50">
-            <div class="flex justify-between items-start">
-                <div class="flex-1">
-                    <div class="flex items-center gap-2">
-                        <span class="font-medium">${task.title}</span>
-                        <span class="px-2 py-1 text-xs rounded ${getStatusBadgeClass(task.status)}">
-                            ${getStatusLabel(task.status)}
-                        </span>
-                        <span class="px-2 py-1 text-xs rounded ${getPriorityBadgeClass(task.priority)}">
-                            ${getPriorityLabel(task.priority)}
-                        </span>
+    const modal = document.createElement('div');
+    modal.className = 'fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4';
+    modal.innerHTML = `
+        <div class="bg-white rounded-lg max-w-6xl w-full max-h-[90vh] overflow-hidden">
+            <!-- Header -->
+            <div class="bg-gradient-to-r from-blue-600 to-purple-600 p-6 text-white">
+                <div class="flex justify-between items-start">
+                    <div class="flex-1">
+                        <h2 class="text-3xl font-bold mb-2">${project.name}</h2>
+                        <p class="text-blue-100">${project.client_name}</p>
+                        <div class="mt-3 flex gap-2">
+                            ${getAreaBadge(project.area)}
+                            ${getStatusBadge(project.status)}
+                        </div>
                     </div>
-                    ${task.description ? `<p class="text-sm text-gray-600 mt-1">${task.description}</p>` : ''}
-                    <div class="text-xs text-gray-500 mt-1">
-                        ${task.assigned_to_name ? `👤 ${task.assigned_to_name}` : '⚠️ Non assegnata'}
-                        ${task.due_date ? ` | 📅 ${formatDate(task.due_date)}` : ''}
-                    </div>
-                </div>
-                ${isAdmin ? `
-                <div class="flex gap-2">
-                    <button onclick="editTask(${task.id})" 
-                            class="text-blue-600 hover:text-blue-800 text-sm">
-                        <i class="fas fa-edit"></i> Modifica
-                    </button>
-                    <button onclick="deleteTask(${task.id}, ${project.id})" 
-                            class="text-red-600 hover:text-red-800 text-sm">
-                        <i class="fas fa-trash"></i>
-                    </button>
-                </div>
-                ` : ''}
-            </div>
-        </div>
-    `).join('');
-    
-    const modalHtml = `
-        <div id="modal-overlay" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onclick="closeModal(event)">
-            <div class="bg-white rounded-lg p-6 max-w-4xl w-full max-h-[90vh] overflow-y-auto" onclick="event.stopPropagation()">
-                <div class="flex justify-between items-start mb-6">
-                    <div>
-                        <h2 class="text-2xl font-bold text-gray-800">${project.name}</h2>
-                        <p class="text-gray-600 mt-1">Cliente: ${project.client_name}</p>
-                        <span class="px-3 py-1 text-sm rounded area-badge-${project.area} inline-block mt-2">
-                            ${getAreaLabel(project.area)}
-                        </span>
-                    </div>
-                    <button onclick="closeModal()" class="text-gray-500 hover:text-gray-700">
+                    <button onclick="closeProjectDetailModal()" class="text-white hover:text-gray-200">
                         <i class="fas fa-times text-2xl"></i>
                     </button>
                 </div>
-                
-                ${project.description ? `
-                <div class="mb-6">
-                    <h3 class="font-semibold mb-2">Descrizione:</h3>
-                    <p class="text-gray-700">${project.description}</p>
-                </div>
-                ` : ''}
-                
-                <div class="grid grid-cols-2 gap-4 mb-6">
-                    <div>
-                        <span class="text-sm text-gray-600">Stato:</span>
-                        <span class="ml-2 px-2 py-1 text-sm rounded ${getStatusBadgeClass(project.status)}">
-                            ${getStatusLabel(project.status)}
-                        </span>
-                    </div>
-                    <div>
-                        <span class="text-sm text-gray-600">Progresso:</span>
-                        <span class="ml-2 font-semibold">${project.completed_tasks}/${project.total_tasks} task completate</span>
-                    </div>
-                    <div>
-                        <span class="text-sm text-gray-600">Data Inizio:</span>
-                        <span class="ml-2">${formatDate(project.start_date)}</span>
-                    </div>
-                    <div>
-                        <span class="text-sm text-gray-600">Data Fine:</span>
-                        <span class="ml-2">${formatDate(project.end_date)}</span>
-                    </div>
-                </div>
-                
-                ${isAdmin ? `
-                <div class="flex gap-2 mb-6">
-                    <button onclick="editProject(${project.id})" 
-                            class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
-                        <i class="fas fa-edit"></i> Modifica Progetto
+            </div>
+            
+            <!-- Tabs -->
+            <div class="border-b">
+                <div class="flex">
+                    <button onclick="switchProjectTab('info')" id="tab-info" class="px-6 py-3 font-semibold border-b-2 border-blue-600 text-blue-600">
+                        <i class="fas fa-info-circle mr-2"></i>Informazioni
                     </button>
-                    <button onclick="showCreateTaskModal(${project.id})" 
-                            class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">
-                        <i class="fas fa-plus"></i> Aggiungi Task
+                    <button onclick="switchProjectTab('tasks')" id="tab-tasks" class="px-6 py-3 font-semibold text-gray-600 hover:text-blue-600">
+                        <i class="fas fa-tasks mr-2"></i>Task (${tasks.length})
                     </button>
-                    <button onclick="deleteProject(${project.id})" 
-                            class="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700">
-                        <i class="fas fa-trash"></i> Elimina Progetto
+                    ${isAdmin ? `
+                    <button onclick="switchProjectTab('edit')" id="tab-edit" class="px-6 py-3 font-semibold text-gray-600 hover:text-blue-600">
+                        <i class="fas fa-edit mr-2"></i>Modifica
                     </button>
+                    ` : ''}
                 </div>
-                ` : ''}
-                
-                <div class="mt-6">
-                    <h3 class="text-xl font-bold mb-4">Task del Progetto (${tasks.length})</h3>
-                    ${tasks.length > 0 ? tasksHtml : '<p class="text-gray-500">Nessuna task in questo progetto</p>'}
-                </div>
+            </div>
+            
+            <!-- Content -->
+            <div class="p-6 overflow-y-auto" style="max-height: calc(90vh - 250px);">
+                <div id="project-tab-content"></div>
             </div>
         </div>
     `;
     
-    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    document.body.appendChild(modal);
+    
+    // Salva dati nel modal per accesso facile
+    modal.projectData = { project, tasks, recurrence };
+    
+    // Mostra tab info di default
+    switchProjectTab('info');
 }
 
 /**
- * Modifica progetto
+ * Chiudi modal dettaglio
  */
-async function editProject(projectId) {
-    try {
-        const response = await axios.get(`${API_URL}/projects/${projectId}`);
-        const { project } = response.data;
-        
-        // Carica lista clienti
-        const clientsResponse = await axios.get(`${API_URL}/clients`);
-        const clients = clientsResponse.data.clients;
-        
-        const clientOptions = clients.map(c => 
-            `<option value="${c.id}" ${c.id === project.client_id ? 'selected' : ''}>${c.name}</option>`
-        ).join('');
-        
-        const modalHtml = `
-            <div id="edit-modal-overlay" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onclick="closeEditModal(event)">
-                <div class="bg-white rounded-lg p-6 max-w-2xl w-full" onclick="event.stopPropagation()">
-                    <h2 class="text-2xl font-bold mb-6">Modifica Progetto</h2>
-                    <form id="edit-project-form" onsubmit="submitEditProject(event, ${projectId})">
-                        <div class="space-y-4">
-                            <div>
-                                <label class="block text-sm font-medium mb-1">Cliente *</label>
-                                <select name="client_id" required class="w-full p-2 border rounded">
-                                    ${clientOptions}
-                                </select>
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium mb-1">Nome Progetto *</label>
-                                <input type="text" name="name" value="${project.name}" required class="w-full p-2 border rounded">
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium mb-1">Descrizione</label>
-                                <textarea name="description" rows="3" class="w-full p-2 border rounded">${project.description || ''}</textarea>
-                            </div>
-                            <div class="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label class="block text-sm font-medium mb-1">Area *</label>
-                                    <select name="area" required class="w-full p-2 border rounded">
-                                        <option value="copywriting" ${project.area === 'copywriting' ? 'selected' : ''}>📝 Copywriting</option>
-                                        <option value="video" ${project.area === 'video' ? 'selected' : ''}>🎬 Video</option>
-                                        <option value="adv" ${project.area === 'adv' ? 'selected' : ''}>📢 ADV</option>
-                                        <option value="grafica" ${project.area === 'grafica' ? 'selected' : ''}>🎨 Grafica</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium mb-1">Stato *</label>
-                                    <select name="status" required class="w-full p-2 border rounded">
-                                        <option value="pending" ${project.status === 'pending' ? 'selected' : ''}>In Attesa</option>
-                                        <option value="active" ${project.status === 'active' ? 'selected' : ''}>Attivo</option>
-                                        <option value="completed" ${project.status === 'completed' ? 'selected' : ''}>Completato</option>
-                                        <option value="on_hold" ${project.status === 'on_hold' ? 'selected' : ''}>In Pausa</option>
-                                        <option value="cancelled" ${project.status === 'cancelled' ? 'selected' : ''}>Cancellato</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label class="block text-sm font-medium mb-1">Data Inizio</label>
-                                    <input type="date" name="start_date" value="${project.start_date || ''}" class="w-full p-2 border rounded">
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium mb-1">Data Fine</label>
-                                    <input type="date" name="end_date" value="${project.end_date || ''}" class="w-full p-2 border rounded">
-                                </div>
-                            </div>
-                        </div>
-                        <div class="flex gap-2 mt-6">
-                            <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
-                                <i class="fas fa-save"></i> Salva Modifiche
-                            </button>
-                            <button type="button" onclick="closeEditModal()" class="px-4 py-2 bg-gray-300 text-gray-700 rounded hover:bg-gray-400">
-                                Annulla
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        `;
-        
-        closeModal(); // Chiudi modal dettaglio
-        document.body.insertAdjacentHTML('beforeend', modalHtml);
-    } catch (error) {
-        console.error('Error loading project for edit:', error);
-        showNotification('Errore nel caricamento', 'error');
+function closeProjectDetailModal() {
+    const modals = document.querySelectorAll('.fixed.inset-0');
+    modals.forEach(modal => modal.remove());
+    
+    // Ricarica lista progetti per vedere modifiche
+    if (APP.currentView === 'projects') {
+        loadProjects().then(projects => displayProjects(projects));
     }
 }
 
 /**
- * Submit modifica progetto
+ * Switch tra tabs
  */
-async function submitEditProject(event, projectId) {
+function switchProjectTab(tabName) {
+    // Update tab buttons
+    ['info', 'tasks', 'edit'].forEach(tab => {
+        const btn = document.getElementById(`tab-${tab}`);
+        if (btn) {
+            if (tab === tabName) {
+                btn.className = 'px-6 py-3 font-semibold border-b-2 border-blue-600 text-blue-600';
+            } else {
+                btn.className = 'px-6 py-3 font-semibold text-gray-600 hover:text-blue-600';
+            }
+        }
+    });
+    
+    // Get data from modal
+    const modal = document.querySelector('.fixed.inset-0');
+    const { project, tasks, recurrence } = modal.projectData;
+    
+    // Render content
+    const content = document.getElementById('project-tab-content');
+    
+    switch(tabName) {
+        case 'info':
+            content.innerHTML = renderProjectInfoTab(project, tasks, recurrence);
+            break;
+        case 'tasks':
+            content.innerHTML = renderProjectTasksTab(project, tasks);
+            break;
+        case 'edit':
+            content.innerHTML = renderProjectEditTab(project);
+            break;
+    }
+}
+
+/**
+ * Tab informazioni progetto
+ */
+function renderProjectInfoTab(project, tasks, recurrence) {
+    const completionRate = project.total_tasks > 0 
+        ? Math.round((project.completed_tasks / project.total_tasks) * 100) 
+        : 0;
+    
+    return `
+        <div class="space-y-6">
+            <!-- Stats -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="bg-blue-50 p-4 rounded-lg">
+                    <div class="text-sm text-gray-600 mb-1">Task Totali</div>
+                    <div class="text-3xl font-bold text-blue-600">${project.total_tasks}</div>
+                </div>
+                <div class="bg-green-50 p-4 rounded-lg">
+                    <div class="text-sm text-gray-600 mb-1">Task Completate</div>
+                    <div class="text-3xl font-bold text-green-600">${project.completed_tasks}</div>
+                </div>
+                <div class="bg-purple-50 p-4 rounded-lg">
+                    <div class="text-sm text-gray-600 mb-1">Completamento</div>
+                    <div class="text-3xl font-bold text-purple-600">${completionRate}%</div>
+                </div>
+            </div>
+            
+            <!-- Progress Bar -->
+            <div>
+                <div class="flex justify-between text-sm text-gray-600 mb-2">
+                    <span>Progresso</span>
+                    <span>${completionRate}%</span>
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-3">
+                    <div class="bg-gradient-to-r from-blue-500 to-purple-500 h-3 rounded-full transition-all" style="width: ${completionRate}%"></div>
+                </div>
+            </div>
+            
+            <!-- Dettagli -->
+            <div class="bg-gray-50 p-4 rounded-lg space-y-3">
+                <div class="flex items-start">
+                    <i class="fas fa-folder text-gray-400 mt-1 mr-3 w-5"></i>
+                    <div class="flex-1">
+                        <div class="text-sm text-gray-600">Nome Progetto</div>
+                        <div class="font-semibold">${project.name}</div>
+                    </div>
+                </div>
+                
+                <div class="flex items-start">
+                    <i class="fas fa-user text-gray-400 mt-1 mr-3 w-5"></i>
+                    <div class="flex-1">
+                        <div class="text-sm text-gray-600">Cliente</div>
+                        <div class="font-semibold">${project.client_name}</div>
+                    </div>
+                </div>
+                
+                <div class="flex items-start">
+                    <i class="fas fa-align-left text-gray-400 mt-1 mr-3 w-5"></i>
+                    <div class="flex-1">
+                        <div class="text-sm text-gray-600">Descrizione</div>
+                        <div class="text-gray-800">${project.description || 'Nessuna descrizione'}</div>
+                    </div>
+                </div>
+                
+                <div class="flex items-start">
+                    <i class="fas fa-tag text-gray-400 mt-1 mr-3 w-5"></i>
+                    <div class="flex-1">
+                        <div class="text-sm text-gray-600">Area</div>
+                        <div>${getAreaBadge(project.area)}</div>
+                    </div>
+                </div>
+                
+                <div class="flex items-start">
+                    <i class="fas fa-info-circle text-gray-400 mt-1 mr-3 w-5"></i>
+                    <div class="flex-1">
+                        <div class="text-sm text-gray-600">Stato</div>
+                        <div>${getStatusBadge(project.status)}</div>
+                    </div>
+                </div>
+                
+                ${project.start_date ? `
+                <div class="flex items-start">
+                    <i class="fas fa-calendar text-gray-400 mt-1 mr-3 w-5"></i>
+                    <div class="flex-1">
+                        <div class="text-sm text-gray-600">Date</div>
+                        <div class="font-semibold">
+                            ${formatDate(project.start_date)}
+                            ${project.end_date ? ` → ${formatDate(project.end_date)}` : ''}
+                        </div>
+                    </div>
+                </div>
+                ` : ''}
+                
+                <div class="flex items-start">
+                    <i class="fas fa-clock text-gray-400 mt-1 mr-3 w-5"></i>
+                    <div class="flex-1">
+                        <div class="text-sm text-gray-600">Creato</div>
+                        <div class="text-sm">${formatDateTime(project.created_at)}</div>
+                        <div class="text-xs text-gray-500">da ${project.created_by_name}</div>
+                    </div>
+                </div>
+            </div>
+            
+            ${recurrence ? `
+            <div class="bg-yellow-50 border border-yellow-200 p-4 rounded-lg">
+                <div class="flex items-center mb-2">
+                    <i class="fas fa-sync text-yellow-600 mr-2"></i>
+                    <span class="font-semibold text-yellow-800">Ricorrenza Attiva</span>
+                </div>
+                <div class="text-sm text-gray-700">
+                    Frequenza: <strong>${recurrence.frequency === 'monthly' ? 'Mensile' : 'Trimestrale'}</strong><br>
+                    Prossima esecuzione: <strong>${formatDate(recurrence.next_execution_date)}</strong>
+                </div>
+            </div>
+            ` : ''}
+        </div>
+    `;
+}
+
+/**
+ * Tab task del progetto con editing inline
+ */
+function renderProjectTasksTab(project, tasks) {
+    const isAdmin = APP.user.role === 'admin';
+    
+    return `
+        <div class="space-y-4">
+            ${isAdmin ? `
+            <div class="flex justify-end">
+                <button onclick="showAddTaskToProject(${project.id})" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg">
+                    <i class="fas fa-plus mr-2"></i>Aggiungi Task
+                </button>
+            </div>
+            ` : ''}
+            
+            ${tasks.length === 0 ? `
+                <div class="text-center py-12 text-gray-500">
+                    <i class="fas fa-tasks text-4xl mb-3"></i>
+                    <p>Nessuna task in questo progetto</p>
+                </div>
+            ` : `
+                <div class="space-y-3">
+                    ${tasks.map(task => `
+                        <div class="bg-white border rounded-lg p-4 hover:shadow-md transition">
+                            <div class="flex items-start justify-between">
+                                <div class="flex-1">
+                                    <div class="flex items-center gap-3 mb-2">
+                                        <h4 class="font-semibold text-gray-900">${task.title}</h4>
+                                        ${getAreaBadge(task.area)}
+                                        ${getStatusBadge(task.status)}
+                                        ${getPriorityBadge(task.priority)}
+                                    </div>
+                                    
+                                    ${task.description ? `
+                                    <p class="text-sm text-gray-600 mb-2">${task.description}</p>
+                                    ` : ''}
+                                    
+                                    <div class="flex flex-wrap gap-4 text-sm text-gray-600">
+                                        ${task.assigned_to_name ? `
+                                        <div>
+                                            <i class="fas fa-user mr-1"></i>
+                                            <span>${task.assigned_to_name}</span>
+                                        </div>
+                                        ` : ''}
+                                        
+                                        ${task.due_date ? `
+                                        <div>
+                                            <i class="fas fa-calendar mr-1"></i>
+                                            <span>${formatDate(task.due_date)}</span>
+                                        </div>
+                                        ` : ''}
+                                        
+                                        ${task.estimated_hours ? `
+                                        <div>
+                                            <i class="fas fa-clock mr-1"></i>
+                                            <span>${task.estimated_hours}h stimate</span>
+                                        </div>
+                                        ` : ''}
+                                    </div>
+                                </div>
+                                
+                                <div class="flex gap-2 ml-4">
+                                    ${isAdmin ? `
+                                    <button onclick="editTask(${task.id})" class="text-blue-600 hover:text-blue-700 p-2" title="Modifica">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button onclick="deleteTask(${task.id}, ${project.id})" class="text-red-600 hover:text-red-700 p-2" title="Elimina">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                    ` : ''}
+                                    
+                                    <button onclick="toggleTaskStatusInline(${task.id}, ${project.id})" class="text-green-600 hover:text-green-700 p-2" title="Toggle Completamento">
+                                        <i class="fas fa-${task.status === 'completed' ? 'undo' : 'check'}"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `}
+        </div>
+    `;
+}
+
+/**
+ * Tab modifica progetto
+ */
+function renderProjectEditTab(project) {
+    return `
+        <form id="edit-project-form" onsubmit="saveProjectEdit(event, ${project.id})" class="space-y-6">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Nome Progetto *</label>
+                <input 
+                    type="text" 
+                    name="name" 
+                    value="${project.name}" 
+                    required
+                    class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                />
+            </div>
+            
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Descrizione</label>
+                <textarea 
+                    name="description" 
+                    rows="3"
+                    class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                >${project.description || ''}</textarea>
+            </div>
+            
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Area *</label>
+                    <select name="area" required class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500">
+                        <option value="copywriting" ${project.area === 'copywriting' ? 'selected' : ''}>Copywriting</option>
+                        <option value="video" ${project.area === 'video' ? 'selected' : ''}>Video</option>
+                        <option value="adv" ${project.area === 'adv' ? 'selected' : ''}>ADV</option>
+                        <option value="grafica" ${project.area === 'grafica' ? 'selected' : ''}>Grafica</option>
+                    </select>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Stato *</label>
+                    <select name="status" required class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500">
+                        <option value="active" ${project.status === 'active' ? 'selected' : ''}>Attivo</option>
+                        <option value="completed" ${project.status === 'completed' ? 'selected' : ''}>Completato</option>
+                        <option value="on_hold" ${project.status === 'on_hold' ? 'selected' : ''}>In Pausa</option>
+                        <option value="cancelled" ${project.status === 'cancelled' ? 'selected' : ''}>Cancellato</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Data Inizio</label>
+                    <input 
+                        type="date" 
+                        name="start_date" 
+                        value="${project.start_date || ''}"
+                        class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                    />
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Data Fine</label>
+                    <input 
+                        type="date" 
+                        name="end_date" 
+                        value="${project.end_date || ''}"
+                        class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                    />
+                </div>
+            </div>
+            
+            <div class="flex gap-3 justify-end pt-4 border-t">
+                <button type="button" onclick="closeProjectDetailModal()" class="px-6 py-2 border rounded-lg hover:bg-gray-50">
+                    Annulla
+                </button>
+                <button type="submit" class="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg">
+                    <i class="fas fa-save mr-2"></i>Salva Modifiche
+                </button>
+            </div>
+        </form>
+    `;
+}
+
+/**
+ * Salva modifiche progetto
+ */
+async function saveProjectEdit(event, projectId) {
     event.preventDefault();
+    
     const form = event.target;
     const formData = new FormData(form);
     
     const data = {
-        client_id: parseInt(formData.get('client_id')),
         name: formData.get('name'),
         description: formData.get('description'),
         area: formData.get('area'),
@@ -239,47 +437,170 @@ async function submitEditProject(event, projectId) {
         end_date: formData.get('end_date') || null
     };
     
+    console.log('💾 Salvataggio modifiche progetto:', data);
+    
     try {
         await axios.put(`${API_URL}/projects/${projectId}`, data);
         showNotification('Progetto aggiornato con successo!', 'success');
-        closeEditModal();
         
-        // Ricarica la vista corrente
-        if (APP.currentView === 'projects') {
-            await loadProjects();
-            renderView('projects');
-        } else if (APP.currentView === 'gantt') {
-            renderView('gantt');
-        }
+        // Ricarica i dati del progetto
+        const response = await axios.get(`${API_URL}/projects/${projectId}`);
+        const modal = document.querySelector('.fixed.inset-0');
+        modal.projectData = response.data;
+        
+        // Torna al tab info
+        switchProjectTab('info');
+        
     } catch (error) {
-        console.error('Error updating project:', error);
-        showNotification('Errore nell\'aggiornamento', 'error');
+        console.error('❌ Errore salvataggio:', error);
+        showNotification('Errore nel salvataggio del progetto', 'error');
     }
 }
 
 /**
- * Elimina progetto
+ * Mostra modal per aggiungere task al progetto
  */
-async function deleteProject(projectId) {
-    if (!confirm('Sei sicuro di voler eliminare questo progetto? Verranno eliminate anche tutte le task associate.')) {
-        return;
-    }
+async function showAddTaskToProject(projectId) {
+    console.log('➕ Aggiungi task al progetto:', projectId);
+    
+    // Carica utenti per assegnazione
+    await loadUsers();
+    
+    const modal = document.createElement('div');
+    modal.className = 'fixed inset-0 bg-black bg-opacity-50 z-[60] flex items-center justify-center p-4';
+    modal.innerHTML = `
+        <div class="bg-white rounded-lg max-w-2xl w-full p-6">
+            <h3 class="text-2xl font-bold mb-6">
+                <i class="fas fa-plus-circle mr-2 text-blue-600"></i>Nuova Task
+            </h3>
+            
+            <form id="add-task-form" onsubmit="saveNewTask(event, ${projectId})" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Titolo *</label>
+                    <input 
+                        type="text" 
+                        name="title" 
+                        required
+                        class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                    />
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Descrizione</label>
+                    <textarea 
+                        name="description" 
+                        rows="3"
+                        class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                    ></textarea>
+                </div>
+                
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Area *</label>
+                        <select name="area" required class="w-full px-4 py-2 border rounded-lg">
+                            <option value="copywriting">Copywriting</option>
+                            <option value="video">Video</option>
+                            <option value="adv">ADV</option>
+                            <option value="grafica">Grafica</option>
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Priorità</label>
+                        <select name="priority" class="w-full px-4 py-2 border rounded-lg">
+                            <option value="low">Bassa</option>
+                            <option value="medium" selected>Media</option>
+                            <option value="high">Alta</option>
+                            <option value="urgent">Urgente</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Assegna a</label>
+                        <select name="assigned_to" class="w-full px-4 py-2 border rounded-lg">
+                            <option value="">Non assegnata</option>
+                            ${APP.users.map(u => `<option value="${u.id}">${u.name}</option>`).join('')}
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Scadenza</label>
+                        <input 
+                            type="date" 
+                            name="due_date"
+                            class="w-full px-4 py-2 border rounded-lg"
+                        />
+                    </div>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Ore Stimate</label>
+                    <input 
+                        type="number" 
+                        name="estimated_hours"
+                        min="0"
+                        step="0.5"
+                        class="w-full px-4 py-2 border rounded-lg"
+                    />
+                </div>
+                
+                <div class="flex gap-3 justify-end pt-4 border-t">
+                    <button type="button" onclick="this.closest('.fixed').remove()" class="px-6 py-2 border rounded-lg hover:bg-gray-50">
+                        Annulla
+                    </button>
+                    <button type="submit" class="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg">
+                        <i class="fas fa-save mr-2"></i>Crea Task
+                    </button>
+                </div>
+            </form>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+}
+
+/**
+ * Salva nuova task
+ */
+async function saveNewTask(event, projectId) {
+    event.preventDefault();
+    
+    const form = event.target;
+    const formData = new FormData(form);
+    
+    const data = {
+        project_id: projectId,
+        title: formData.get('title'),
+        description: formData.get('description') || null,
+        area: formData.get('area'),
+        priority: formData.get('priority'),
+        assigned_to: formData.get('assigned_to') || null,
+        due_date: formData.get('due_date') || null,
+        estimated_hours: formData.get('estimated_hours') || null
+    };
+    
+    console.log('💾 Creazione nuova task:', data);
     
     try {
-        await axios.delete(`${API_URL}/projects/${projectId}`);
-        showNotification('Progetto eliminato con successo!', 'success');
-        closeModal();
+        await axios.post(`${API_URL}/tasks`, data);
+        showNotification('Task creata con successo!', 'success');
         
-        // Ricarica la vista
-        if (APP.currentView === 'projects') {
-            await loadProjects();
-            renderView('projects');
-        } else if (APP.currentView === 'gantt') {
-            renderView('gantt');
-        }
+        // Chiudi modal add task
+        form.closest('.fixed').remove();
+        
+        // Ricarica progetto
+        const response = await axios.get(`${API_URL}/projects/${projectId}`);
+        const modal = document.querySelector('.fixed.inset-0');
+        modal.projectData = response.data;
+        
+        // Aggiorna vista tasks
+        switchProjectTab('tasks');
+        
     } catch (error) {
-        console.error('Error deleting project:', error);
-        showNotification('Errore nell\'eliminazione', 'error');
+        console.error('❌ Errore creazione task:', error);
+        showNotification('Errore nella creazione della task', 'error');
     }
 }
 
@@ -287,141 +608,184 @@ async function deleteProject(projectId) {
  * Modifica task
  */
 async function editTask(taskId) {
+    console.log('✏️ Modifica task:', taskId);
+    
     try {
+        // Carica dettagli task
         const response = await axios.get(`${API_URL}/tasks/${taskId}`);
         const task = response.data.task;
         
-        // Carica utenti per assegnazione
-        const usersResponse = await axios.get(`${API_URL}/auth/users`);
-        const users = usersResponse.data.users;
+        // Carica utenti
+        await loadUsers();
         
-        const userOptions = users.map(u => 
-            `<option value="${u.id}" ${u.id === task.assigned_to ? 'selected' : ''}>${u.name} (${u.role})</option>`
-        ).join('');
-        
-        const modalHtml = `
-            <div id="edit-task-modal-overlay" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onclick="closeEditTaskModal(event)">
-                <div class="bg-white rounded-lg p-6 max-w-2xl w-full" onclick="event.stopPropagation()">
-                    <h2 class="text-2xl font-bold mb-6">Modifica Task</h2>
-                    <form id="edit-task-form" onsubmit="submitEditTask(event, ${taskId})">
-                        <div class="space-y-4">
-                            <div>
-                                <label class="block text-sm font-medium mb-1">Titolo *</label>
-                                <input type="text" name="title" value="${task.title}" required class="w-full p-2 border rounded">
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium mb-1">Descrizione</label>
-                                <textarea name="description" rows="3" class="w-full p-2 border rounded">${task.description || ''}</textarea>
-                            </div>
-                            <div class="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label class="block text-sm font-medium mb-1">Area *</label>
-                                    <select name="area" required class="w-full p-2 border rounded">
-                                        <option value="copywriting" ${task.area === 'copywriting' ? 'selected' : ''}>📝 Copywriting</option>
-                                        <option value="video" ${task.area === 'video' ? 'selected' : ''}>🎬 Video</option>
-                                        <option value="adv" ${task.area === 'adv' ? 'selected' : ''}>📢 ADV</option>
-                                        <option value="grafica" ${task.area === 'grafica' ? 'selected' : ''}>🎨 Grafica</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium mb-1">Assegnata a</label>
-                                    <select name="assigned_to" class="w-full p-2 border rounded">
-                                        <option value="">Non assegnata</option>
-                                        ${userOptions}
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="grid grid-cols-3 gap-4">
-                                <div>
-                                    <label class="block text-sm font-medium mb-1">Stato *</label>
-                                    <select name="status" required class="w-full p-2 border rounded">
-                                        <option value="pending" ${task.status === 'pending' ? 'selected' : ''}>Da Fare</option>
-                                        <option value="in_progress" ${task.status === 'in_progress' ? 'selected' : ''}>In Corso</option>
-                                        <option value="completed" ${task.status === 'completed' ? 'selected' : ''}>Completata</option>
-                                        <option value="blocked" ${task.status === 'blocked' ? 'selected' : ''}>Bloccata</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium mb-1">Priorità *</label>
-                                    <select name="priority" required class="w-full p-2 border rounded">
-                                        <option value="low" ${task.priority === 'low' ? 'selected' : ''}>Bassa</option>
-                                        <option value="medium" ${task.priority === 'medium' ? 'selected' : ''}>Media</option>
-                                        <option value="high" ${task.priority === 'high' ? 'selected' : ''}>Alta</option>
-                                        <option value="urgent" ${task.priority === 'urgent' ? 'selected' : ''}>Urgente</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium mb-1">Ore Stimate</label>
-                                    <input type="number" name="estimated_hours" value="${task.estimated_hours || ''}" min="0" step="0.5" class="w-full p-2 border rounded">
-                                </div>
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium mb-1">Data Scadenza</label>
-                                <input type="date" name="due_date" value="${task.due_date || ''}" class="w-full p-2 border rounded">
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium mb-1">Note</label>
-                                <textarea name="notes" rows="2" class="w-full p-2 border rounded">${task.notes || ''}</textarea>
-                            </div>
+        // Mostra modal edit
+        const modal = document.createElement('div');
+        modal.className = 'fixed inset-0 bg-black bg-opacity-50 z-[60] flex items-center justify-center p-4';
+        modal.innerHTML = `
+            <div class="bg-white rounded-lg max-w-2xl w-full p-6">
+                <h3 class="text-2xl font-bold mb-6">
+                    <i class="fas fa-edit mr-2 text-blue-600"></i>Modifica Task
+                </h3>
+                
+                <form id="edit-task-form" onsubmit="saveTaskEdit(event, ${taskId})" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Titolo *</label>
+                        <input 
+                            type="text" 
+                            name="title" 
+                            value="${task.title}"
+                            required
+                            class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                        />
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Descrizione</label>
+                        <textarea 
+                            name="description" 
+                            rows="3"
+                            class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                        >${task.description || ''}</textarea>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Area *</label>
+                            <select name="area" required class="w-full px-4 py-2 border rounded-lg">
+                                <option value="copywriting" ${task.area === 'copywriting' ? 'selected' : ''}>Copywriting</option>
+                                <option value="video" ${task.area === 'video' ? 'selected' : ''}>Video</option>
+                                <option value="adv" ${task.area === 'adv' ? 'selected' : ''}>ADV</option>
+                                <option value="grafica" ${task.area === 'grafica' ? 'selected' : ''}>Grafica</option>
+                            </select>
                         </div>
-                        <div class="flex gap-2 mt-6">
-                            <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
-                                <i class="fas fa-save"></i> Salva Modifiche
-                            </button>
-                            <button type="button" onclick="closeEditTaskModal()" class="px-4 py-2 bg-gray-300 text-gray-700 rounded hover:bg-gray-400">
-                                Annulla
-                            </button>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Stato *</label>
+                            <select name="status" required class="w-full px-4 py-2 border rounded-lg">
+                                <option value="pending" ${task.status === 'pending' ? 'selected' : ''}>Da Fare</option>
+                                <option value="in_progress" ${task.status === 'in_progress' ? 'selected' : ''}>In Corso</option>
+                                <option value="completed" ${task.status === 'completed' ? 'selected' : ''}>Completata</option>
+                                <option value="blocked" ${task.status === 'blocked' ? 'selected' : ''}>Bloccata</option>
+                            </select>
                         </div>
-                    </form>
-                </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Priorità</label>
+                            <select name="priority" class="w-full px-4 py-2 border rounded-lg">
+                                <option value="low" ${task.priority === 'low' ? 'selected' : ''}>Bassa</option>
+                                <option value="medium" ${task.priority === 'medium' ? 'selected' : ''}>Media</option>
+                                <option value="high" ${task.priority === 'high' ? 'selected' : ''}>Alta</option>
+                                <option value="urgent" ${task.priority === 'urgent' ? 'selected' : ''}>Urgente</option>
+                            </select>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Assegna a</label>
+                            <select name="assigned_to" class="w-full px-4 py-2 border rounded-lg">
+                                <option value="">Non assegnata</option>
+                                ${APP.users.map(u => `<option value="${u.id}" ${task.assigned_to == u.id ? 'selected' : ''}>${u.name}</option>`).join('')}
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Scadenza</label>
+                            <input 
+                                type="date" 
+                                name="due_date"
+                                value="${task.due_date || ''}"
+                                class="w-full px-4 py-2 border rounded-lg"
+                            />
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Ore Stimate</label>
+                            <input 
+                                type="number" 
+                                name="estimated_hours"
+                                value="${task.estimated_hours || ''}"
+                                min="0"
+                                step="0.5"
+                                class="w-full px-4 py-2 border rounded-lg"
+                            />
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Note</label>
+                        <textarea 
+                            name="notes" 
+                            rows="2"
+                            class="w-full px-4 py-2 border rounded-lg"
+                        >${task.notes || ''}</textarea>
+                    </div>
+                    
+                    <div class="flex gap-3 justify-end pt-4 border-t">
+                        <button type="button" onclick="this.closest('.fixed').remove()" class="px-6 py-2 border rounded-lg hover:bg-gray-50">
+                            Annulla
+                        </button>
+                        <button type="submit" class="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg">
+                            <i class="fas fa-save mr-2"></i>Salva Modifiche
+                        </button>
+                    </div>
+                </form>
             </div>
         `;
         
-        document.body.insertAdjacentHTML('beforeend', modalHtml);
+        document.body.appendChild(modal);
+        
     } catch (error) {
-        console.error('Error loading task for edit:', error);
-        showNotification('Errore nel caricamento', 'error');
+        console.error('❌ Errore caricamento task:', error);
+        showNotification('Errore nel caricamento della task', 'error');
     }
 }
 
 /**
- * Submit modifica task
+ * Salva modifiche task
  */
-async function submitEditTask(event, taskId) {
+async function saveTaskEdit(event, taskId) {
     event.preventDefault();
+    
     const form = event.target;
     const formData = new FormData(form);
     
     const data = {
         title: formData.get('title'),
-        description: formData.get('description'),
+        description: formData.get('description') || null,
         area: formData.get('area'),
-        assigned_to: formData.get('assigned_to') ? parseInt(formData.get('assigned_to')) : null,
         status: formData.get('status'),
         priority: formData.get('priority'),
-        estimated_hours: formData.get('estimated_hours') ? parseFloat(formData.get('estimated_hours')) : null,
+        assigned_to: formData.get('assigned_to') || null,
         due_date: formData.get('due_date') || null,
-        notes: formData.get('notes')
+        estimated_hours: formData.get('estimated_hours') || null,
+        notes: formData.get('notes') || null
     };
+    
+    console.log('💾 Salvataggio modifiche task:', data);
     
     try {
         await axios.put(`${API_URL}/tasks/${taskId}`, data);
         showNotification('Task aggiornata con successo!', 'success');
-        closeEditTaskModal();
         
-        // Ricarica la vista corrente
-        const currentTask = APP.tasks.find(t => t.id === taskId);
-        if (currentTask) {
-            await viewProjectDetail(currentTask.project_id);
-        } else {
-            if (APP.currentView === 'tasks' || APP.currentView === 'my-tasks') {
-                await loadTasks();
-                renderView(APP.currentView);
-            }
-        }
+        // Chiudi modal edit
+        form.closest('.fixed').remove();
+        
+        // Ricarica progetto (prendi projectId dal modal principale)
+        const mainModal = document.querySelectorAll('.fixed.inset-0')[0];
+        const projectId = mainModal.projectData.project.id;
+        
+        const response = await axios.get(`${API_URL}/projects/${projectId}`);
+        mainModal.projectData = response.data;
+        
+        // Aggiorna vista tasks
+        switchProjectTab('tasks');
+        
     } catch (error) {
-        console.error('Error updating task:', error);
-        showNotification('Errore nell\'aggiornamento', 'error');
+        console.error('❌ Errore salvataggio task:', error);
+        showNotification('Errore nel salvataggio della task', 'error');
     }
 }
 
@@ -433,101 +797,48 @@ async function deleteTask(taskId, projectId) {
         return;
     }
     
+    console.log('🗑️ Eliminazione task:', taskId);
+    
     try {
         await axios.delete(`${API_URL}/tasks/${taskId}`);
         showNotification('Task eliminata con successo!', 'success');
         
-        // Ricarica dettaglio progetto
-        if (projectId) {
-            await viewProjectDetail(projectId);
-        }
+        // Ricarica progetto
+        const response = await axios.get(`${API_URL}/projects/${projectId}`);
+        const modal = document.querySelector('.fixed.inset-0');
+        modal.projectData = response.data;
+        
+        // Aggiorna vista tasks
+        switchProjectTab('tasks');
+        
     } catch (error) {
-        console.error('Error deleting task:', error);
-        showNotification('Errore nell\'eliminazione', 'error');
+        console.error('❌ Errore eliminazione task:', error);
+        showNotification('Errore nell\'eliminazione della task', 'error');
     }
 }
 
 /**
- * Helper functions per chiudere modal
+ * Toggle stato task inline
  */
-function closeModal(event) {
-    if (!event || event.target.id === 'modal-overlay') {
-        const modal = document.getElementById('modal-overlay');
-        if (modal) modal.remove();
+async function toggleTaskStatusInline(taskId, projectId) {
+    console.log('🔄 Toggle stato task:', taskId);
+    
+    try {
+        await axios.post(`${API_URL}/tasks/${taskId}/toggle`);
+        showNotification('Stato task aggiornato!', 'success');
+        
+        // Ricarica progetto
+        const response = await axios.get(`${API_URL}/projects/${projectId}`);
+        const modal = document.querySelector('.fixed.inset-0');
+        modal.projectData = response.data;
+        
+        // Aggiorna vista tasks
+        switchProjectTab('tasks');
+        
+    } catch (error) {
+        console.error('❌ Errore toggle task:', error);
+        showNotification('Errore nell\'aggiornamento dello stato', 'error');
     }
 }
 
-function closeEditModal(event) {
-    if (!event || event.target.id === 'edit-modal-overlay') {
-        const modal = document.getElementById('edit-modal-overlay');
-        if (modal) modal.remove();
-    }
-}
-
-function closeEditTaskModal(event) {
-    if (!event || event.target.id === 'edit-task-modal-overlay') {
-        const modal = document.getElementById('edit-task-modal-overlay');
-        if (modal) modal.remove();
-    }
-}
-
-/**
- * Helper per classi badge
- */
-function getStatusBadgeClass(status) {
-    const classes = {
-        pending: 'bg-yellow-100 text-yellow-800',
-        in_progress: 'bg-blue-100 text-blue-800',
-        completed: 'bg-green-100 text-green-800',
-        blocked: 'bg-red-100 text-red-800',
-        active: 'bg-green-100 text-green-800',
-        on_hold: 'bg-orange-100 text-orange-800',
-        cancelled: 'bg-gray-100 text-gray-800'
-    };
-    return classes[status] || 'bg-gray-100 text-gray-800';
-}
-
-function getStatusLabel(status) {
-    const labels = {
-        pending: 'Da Fare',
-        in_progress: 'In Corso',
-        completed: 'Completata',
-        blocked: 'Bloccata',
-        active: 'Attivo',
-        on_hold: 'In Pausa',
-        cancelled: 'Cancellato'
-    };
-    return labels[status] || status;
-}
-
-function getPriorityBadgeClass(priority) {
-    const classes = {
-        low: 'bg-gray-100 text-gray-800',
-        medium: 'bg-blue-100 text-blue-800',
-        high: 'bg-orange-100 text-orange-800',
-        urgent: 'bg-red-100 text-red-800'
-    };
-    return classes[priority] || 'bg-gray-100 text-gray-800';
-}
-
-function getPriorityLabel(priority) {
-    const labels = {
-        low: 'Bassa',
-        medium: 'Media',
-        high: 'Alta',
-        urgent: 'Urgente'
-    };
-    return labels[priority] || priority;
-}
-
-function getAreaLabel(area) {
-    const labels = {
-        copywriting: '📝 Copywriting',
-        video: '🎬 Video',
-        adv: '📢 ADV',
-        grafica: '🎨 Grafica'
-    };
-    return labels[area] || area;
-}
-
-console.log('✅ Edit functions loaded');
+console.log('✅ Project detail & editing module loaded');
