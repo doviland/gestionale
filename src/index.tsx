@@ -46,6 +46,8 @@ app.get('/api/health', (c) => {
 
 // Root route - Serve frontend
 app.get('/', (c) => {
+  // Add cache busting
+  const version = Date.now();
   return c.html(`
 <!DOCTYPE html>
 <html lang="it">
@@ -67,7 +69,7 @@ app.get('/', (c) => {
     <div id="app"></div>
     
     <script src="https://cdn.jsdelivr.net/npm/axios@1.6.0/dist/axios.min.js"></script>
-    <script src="/static/app.js"></script>
+    <script src="/static/app.js?v=${version}"></script>
 </body>
 </html>
   `);
