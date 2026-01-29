@@ -11,6 +11,8 @@ Un sistema completo di gestione progetti per agenzie, con tracking attività, ge
 
 ### 👨‍💼 Per Amministratori
 - ✅ **Dashboard completa** con statistiche in tempo reale
+- ✅ **Vista Gantt** - Timeline completa di tutti i progetti con visualizzazione grafica delle task
+- ✅ **Carico Lavoro** - Monitora il carico di lavoro di ogni collaboratore con statistiche dettagliate
 - ✅ **Gestione clienti** - Crea, modifica, visualizza clienti dell'agenzia
 - ✅ **Gestione progetti** - Crea progetti da template o da zero
 - ✅ **Template riutilizzabili** - Crea template di progetto con task predefinite
@@ -24,6 +26,13 @@ Un sistema completo di gestione progetti per agenzie, con tracking attività, ge
 - ✅ **Toggle rapido** - Segna task come completate con un click
 - ✅ **Permessi per area** - Accesso limitato alle aree di competenza
 - ✅ **Filtri avanzati** - Filtra per progetto, cliente, area, stato
+
+### 📊 Visualizzazioni Gantt (NEW!)
+- ✅ **Vista Gantt Overview** - Timeline di tutti i progetti attivi con progress bar
+- ✅ **Carico Lavoro Utenti** - Vista dettagliata del carico di lavoro per ogni collaboratore
+- ✅ **Statistiche progetto** - Percentuale completamento, task scadute, task in corso
+- ✅ **Filtri per area** - Filtra i progetti per area di competenza
+- ✅ **Timeline dinamica** - Visualizza il flusso di lavoro nei prossimi 90 giorni
 
 ### 🎯 Aree Operative
 - **📝 Copywriting** - Gestione contenuti testuali e copy
@@ -223,6 +232,12 @@ npm run cf-typegen       # Genera TypeScript types per bindings
 - `GET /api/dashboard/monthly-activities` - Attività mensili
 - `GET /api/dashboard/my-tasks-summary` - Riepilogo task personali
 - `GET /api/dashboard/projects-by-client` - Progetti per cliente
+
+### Gantt & Workload (NEW!)
+- `GET /api/gantt/overview` - Vista overview di tutti i progetti con timeline (admin only)
+- `GET /api/gantt/workload` - Carico lavoro di tutti gli utenti (admin only)
+- `GET /api/gantt/project/:id` - Dati Gantt per un progetto specifico
+- `GET /api/gantt/user/:userId` - Vista Gantt per un utente specifico
 
 ## 🎨 Struttura Progetto
 
