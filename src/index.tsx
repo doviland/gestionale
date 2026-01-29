@@ -69,6 +69,7 @@ app.get('/', (c) => {
     <div id="app"></div>
     
     <script src="https://cdn.jsdelivr.net/npm/axios@1.6.0/dist/axios.min.js"></script>
+    <script src="/static/edit-functions.js?v=${version}"></script>
     <script src="/static/app.js?v=${version}"></script>
 </body>
 </html>

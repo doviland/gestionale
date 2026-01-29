@@ -751,7 +751,7 @@ function displayProjects(projects) {
     }
     
     grid.innerHTML = projects.map(project => `
-        <div class="bg-white p-6 rounded-lg shadow hover:shadow-lg transition cursor-pointer" onclick="viewProject(${project.id})">
+        <div class="bg-white p-6 rounded-lg shadow hover:shadow-lg transition">
             <div class="flex justify-between items-start mb-4">
                 <h3 class="font-bold text-lg text-gray-800">${project.name}</h3>
                 ${getAreaBadge(project.area)}
@@ -759,7 +759,7 @@ function displayProjects(projects) {
             <p class="text-sm text-gray-600 mb-3">${project.client_name}</p>
             <p class="text-sm text-gray-500 mb-4 line-clamp-2">${project.description || 'Nessuna descrizione'}</p>
             
-            <div class="flex justify-between items-center">
+            <div class="flex justify-between items-center mb-4">
                 ${getStatusBadge(project.status)}
                 <span class="text-sm text-gray-600">
                     ${project.completed_tasks}/${project.total_tasks} task
@@ -767,11 +767,15 @@ function displayProjects(projects) {
             </div>
             
             ${project.start_date ? `
-            <div class="mt-4 text-xs text-gray-500">
+            <div class="mb-4 text-xs text-gray-500">
                 <i class="fas fa-calendar mr-1"></i>${formatDate(project.start_date)}
                 ${project.end_date ? ` → ${formatDate(project.end_date)}` : ''}
             </div>
             ` : ''}
+            
+            <button onclick="viewProjectDetail(${project.id})" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded">
+                <i class="fas fa-eye mr-2"></i>Visualizza Dettagli
+            </button>
         </div>
     `).join('');
 }
@@ -834,10 +838,22 @@ function renderTasks() {
                                     <td class="px-6 py-4">${getPriorityBadge(task.priority)}</td>
                                     <td class="px-6 py-4 text-sm text-gray-900">${formatDate(task.due_date)}</td>
                                     <td class="px-6 py-4">
-                                        <button onclick="toggleTaskStatus(${task.id}).then(() => renderTasks())" 
-                                                class="text-blue-600 hover:text-blue-800 mr-2" title="Toggle completamento">
-                                            <i class="fas ${task.status === 'completed' ? 'fa-undo' : 'fa-check'}"></i>
-                                        </button>
+                                        <div class="flex gap-2">
+                                            <button onclick="editTask(${task.id})" 
+                                                    class="text-blue-600 hover:text-blue-800" title="Modifica">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <button onclick="toggleTaskStatus(${task.id}).then(() => renderTasks())" 
+                                                    class="text-green-600 hover:text-green-800" title="Toggle completamento">
+                                                <i class="fas ${task.status === 'completed' ? 'fa-undo' : 'fa-check'}"></i>
+                                            </button>
+                                            ${APP.user.role === 'admin' ? `
+                                            <button onclick="deleteTask(${task.id}, null)" 
+                                                    class="text-red-600 hover:text-red-800" title="Elimina">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                            ` : ''}
+                                        </div>
                                     </td>
                                 </tr>
                             `).join('')}
