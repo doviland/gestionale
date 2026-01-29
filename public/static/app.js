@@ -27,7 +27,7 @@ function getToken() {
 }
 
 function setToken(token) {
-    localStorage.setItem('token');
+    localStorage.setItem('token', token);
     APP.token = token;
     axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
 }
