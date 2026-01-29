@@ -13,12 +13,14 @@ Un sistema completo di gestione progetti per agenzie, con tracking attività, ge
 
 ### 👨‍💼 Per Amministratori
 - ✅ **Dashboard completa** con statistiche in tempo reale
-- ✅ **Vista Gantt** - Timeline completa di tutti i progetti con visualizzazione grafica delle task
+- ✅ **Vista Gantt Overview** - Timeline completa di tutti i progetti con visualizzazione grafica delle task
+- ✅ **Gantt Workflow Progetto** - Vista orizzontale dettagliata per singolo progetto con task collegate in sequenza
 - ✅ **Carico Lavoro** - Monitora il carico di lavoro di ogni collaboratore con statistiche dettagliate
-- ✅ **Gestione clienti** - Crea, modifica, visualizza clienti dell'agenzia
-- ✅ **Gestione progetti** - Crea progetti da template o da zero
-- ✅ **Template riutilizzabili** - Crea template di progetto con task predefinite
-- ✅ **Gestione utenti** - Crea collaboratori con permessi per area
+- ✅ **Gestione clienti** - Crea, modifica, elimina clienti dell'agenzia (CRUD completo)
+- ✅ **Gestione progetti** - Crea, modifica, elimina progetti da template o da zero (CRUD completo)
+- ✅ **Template riutilizzabili** - Crea, modifica, elimina template di progetto con task predefinite (CRUD completo)
+- ✅ **Gestione utenti** - Crea, modifica, elimina collaboratori con permessi per area (CRUD completo)
+- ✅ **Gestione task complete** - Crea, modifica, elimina, assegna task con tutti i dettagli (CRUD completo)
 - ✅ **Vista completa task** - Monitora tutte le attività dell'agenzia
 - ✅ **Activity log** - Storico completo delle attività
 
@@ -31,6 +33,13 @@ Un sistema completo di gestione progetti per agenzie, con tracking attività, ge
 
 ### 📊 Visualizzazioni Gantt (NEW!)
 - ✅ **Vista Gantt Overview** - Timeline di tutti i progetti attivi con progress bar
+- ✅ **Gantt Workflow Progetto** - Vista orizzontale per singolo progetto con:
+  - Timeline giorni/settimane personalizzata
+  - Barre task colorate per stato (completata/in corso/pending/bloccata)
+  - Opacità per priorità
+  - Frecce di collegamento tra task in sequenza temporale
+  - Tooltip interattivi per modifica rapida
+  - Canvas con connessioni curve tra task
 - ✅ **Carico Lavoro Utenti** - Vista dettagliata del carico di lavoro per ogni collaboratore
 - ✅ **Statistiche progetto** - Percentuale completamento, task scadute, task in corso
 - ✅ **Filtri per area** - Filtra i progetti per area di competenza
