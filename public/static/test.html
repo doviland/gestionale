@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <title>Test Login Gestionale</title>
+    <script src="https://cdn.jsdelivr.net/npm/axios@1.6.0/dist/axios.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 600px; margin: 50px auto; padding: 20px; }
+        input, button { display: block; width: 100%; padding: 10px; margin: 10px 0; font-size: 16px; }
+        button { background: #3b82f6; color: white; border: none; cursor: pointer; }
+        button:hover { background: #2563eb; }
+        #result { background: #f3f4f6; padding: 15px; border-radius: 5px; white-space: pre-wrap; }
+        .error { background: #fee2e2; color: #991b1b; }
+        .success { background: #d1fae5; color: #065f46; }
+    </style>
+</head>
+<body>
+    <h1>🔐 Test Login Gestionale</h1>
+    
+    <div>
+        <label>Email:</label>
+        <input type="email" id="email" value="admin@agenzia.it" />
+        
+        <label>Password:</label>
+        <input type="password" id="password" value="admin123" />
+        
+        <button onclick="testLogin()">🚀 Test Login</button>
+    </div>
+    
+    <h3>Risultato:</h3>
+    <div id="result">Clicca il bottone per testare...</div>
+    
+    <script>
+        async function testLogin() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const resultDiv = document.getElementById('result');
+            
+            resultDiv.textContent = 'Caricamento...';
+            resultDiv.className = '';
+            
+            try {
+                const response = await axios.post('/api/auth/login', {
+                    email: email,
+                    password: password
+                });
+                
+                resultDiv.className = 'success';
+                resultDiv.textContent = '✅ LOGIN RIUSCITO!\n\n' + JSON.stringify(response.data, null, 2);
+                
+                // Salva token
+                localStorage.setItem('token', response.data.token);
+                console.log('Token salvato:', response.data.token);
+                
+            } catch (error) {
+                resultDiv.className = 'error';
+                resultDiv.textContent = '❌ ERRORE LOGIN:\n\n' + 
+                    (error.response ? JSON.stringify(error.response.data, null, 2) : error.message);
+            }
+        }
+        
+        // Auto test al caricamento
+        console.log('Pagina test caricata');
+        console.log('API URL:', window.location.origin + '/api/auth/login');
+    </script>
+</body>
+</html>
