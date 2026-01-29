@@ -971,6 +971,7 @@ function renderClients() {
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Telefono</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Stato</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Data Creazione</th>
+                            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Azioni</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-200">
@@ -982,6 +983,14 @@ function renderClients() {
                                 <td class="px-6 py-4 text-sm text-gray-900">${client.phone || '-'}</td>
                                 <td class="px-6 py-4">${getStatusBadge(client.status)}</td>
                                 <td class="px-6 py-4 text-sm text-gray-500">${formatDate(client.created_at)}</td>
+                                <td class="px-6 py-4 text-right space-x-2">
+                                    <button onclick="editClient(${client.id})" class="text-blue-600 hover:text-blue-700" title="Modifica">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button onclick="deleteClient(${client.id})" class="text-red-600 hover:text-red-700" title="Elimina">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </td>
                             </tr>
                         `).join('')}
                     </tbody>
@@ -1013,8 +1022,18 @@ function renderTemplates() {
                 ${templates.map(template => `
                     <div class="bg-white p-6 rounded-lg shadow">
                         <div class="flex justify-between items-start mb-4">
-                            <h3 class="font-bold text-lg text-gray-800">${template.name}</h3>
-                            ${getAreaBadge(template.area)}
+                            <div class="flex-1">
+                                <h3 class="font-bold text-lg text-gray-800">${template.name}</h3>
+                                ${getAreaBadge(template.area)}
+                            </div>
+                            <div class="flex gap-2">
+                                <button onclick="editTemplate(${template.id})" class="text-blue-600 hover:text-blue-700 p-2" title="Modifica">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button onclick="deleteTemplate(${template.id})" class="text-red-600 hover:text-red-700 p-2" title="Elimina">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
                         </div>
                         <p class="text-sm text-gray-600 mb-4">${template.description || 'Nessuna descrizione'}</p>
                         <div class="border-t pt-4">
@@ -1060,6 +1079,7 @@ function renderUsers() {
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ruolo</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Permessi Aree</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Stato</th>
+                            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Azioni</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-200">
@@ -1084,6 +1104,14 @@ function renderUsers() {
                                     <span class="px-2 py-1 text-xs rounded-full ${user.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}">
                                         ${user.is_active ? 'Attivo' : 'Inattivo'}
                                     </span>
+                                </td>
+                                <td class="px-6 py-4 text-right space-x-2">
+                                    <button onclick="editUser(${user.id})" class="text-blue-600 hover:text-blue-700" title="Modifica">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button onclick="deleteUser(${user.id})" class="text-red-600 hover:text-red-700" title="Elimina">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
                                 </td>
                             </tr>
                         `).join('')}
